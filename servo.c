@@ -1,6 +1,6 @@
 #include <avr/io.h>
-#include <util/delay.h>
 
+inline void servo_set_angle(uint8_t angle);
 int main(void) {
 	//xmegaA, pp160. In frequency generation mode, freq = clk/(2N(CCA+1)), N = prescaler
 	//also pp160, freq = clk/(N(PER+1))
@@ -9,9 +9,19 @@ int main(void) {
 	TCC0.CTRLB |= TC0_CCAEN_bm | TC_WGMODE_DSBOTH_gc ;
 	TCC0.PER = 312;
 
+	//dirset is required
 	PORTC.DIRSET = PIN0_bm;
 	PORTC.OUTCLR = PIN0_bm;
-	//10-38
-	TCC0.CCA = 24;
+
+	servo_set_angle(0);
+
 	while (1);
+}
+
+inline void servo_set_angle(uint8_t angle) {
+	const uint8_t cca_min = 10;
+	const uint8_t cca_max = 38;
+
+	//map [0,180] -> [cca_min, cca_max]
+	TCC0.CCA = cca_min + ((float)(cca_max-cca_min))/180 * angle;
 }
