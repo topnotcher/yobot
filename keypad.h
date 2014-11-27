@@ -84,9 +84,8 @@
 
 void keypad_init(void);
 
-uint8_t keypad_scan(void);
 void keypad_int_enable(void);
 void keypad_int_disable(void);
-char keypad_getchar(uint8_t);
+char keypad_getc(void);
 
 #endif

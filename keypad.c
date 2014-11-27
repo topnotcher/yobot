@@ -1,5 +1,6 @@
-#include "keypad.h"
+#include <util/atomic.h>
 #include <stdint.h>
+#include "keypad.h"
 
 /**
  * 3x4 matrix keypad driver.
@@ -92,14 +93,14 @@ KEYPAD_ISR {
 	keypad_init_colscan();
 }
 
-uint8_t keypad_scan(void) {
-	uint8_t tmp = keymask; 
-	keymask = 0;
-	return tmp;
-}
+char keypad_getc(void) {
+	uint8_t tmp;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		tmp = keymask; 
+		keymask = 0;
+	}
 
-char keypad_getchar(uint8_t keymask) {
-	switch (keymask) {
+	switch (tmp) {
 		case KEY_1:
 			return '1';
 		case KEY_2:
@@ -125,6 +126,6 @@ char keypad_getchar(uint8_t keymask) {
 		case KEY_POUND:
 			return '#';
 		default:
-			return '?';
+			return '\0';
 	}
 }

@@ -26,12 +26,10 @@ int main(void) {
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();
 
-
 	while (1) {
-		uint8_t msk;
-		if ((msk = keypad_scan())) {
+		char key;
+		if ((key = keypad_getc())) {
 			keypad_int_disable();
-			char key = keypad_getchar(msk);
 			display_putchar(key);
 
 			if (key == '*')
