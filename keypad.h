@@ -5,18 +5,17 @@
 #ifndef KEYPAD_H
 #define KEYPAD_H
 
+/**
+ * PORT and interrupt vector for keypad pins.
+ */
 #define KEYPAD_PORT PORTA
 #define KEYPAD_ISR ISR(PORTA_INT0_vect)
 
-/*
-1 2 3 | 1
-4 5 6 | 6
-7 8 9 | 5
-* 0 # | 3
-------
-2 0 4
-*/
-
+/**
+ * Map the port pins to the keypad rows columns.
+ * "KEYPAD_PIN_R2 6" means row 2 on the keypad is 
+ * connected to PIN6 on the port. 
+ */
 #define KEYPAD_PIN_R1 1
 #define KEYPAD_PIN_R2 6
 #define KEYPAD_PIN_R3 5
@@ -24,6 +23,10 @@
 #define KEYPAD_PIN_C1 2
 #define KEYPAD_PIN_C2 0
 #define KEYPAD_PIN_C3 4
+
+/**
+ * No configuration required beyond this point.
+ */
 
 #define KEYPAD_PORT_CONCAT(a,b) a ## b
 #define KEYPAD_PORT_CONCAT3(a,b,c) a##b##c
@@ -36,6 +39,11 @@
 #define KEYPAD_PINCTRL(key) KEYPAD_PORT.KEYPAD_PORT_PINCTRL(KEYPAD_PORT_CONCAT(KEYPAD_PIN_,key))
 
 #define KEY_PINS(r,c) (KEYPAD_PIN(KEYPAD_PIN_R##r) | KEYPAD_PIN(KEYPAD_PIN_C##c))
+
+/**
+ * Map the matrix to the actual keys #define KEY_1 KEY_PINS(1,1) means the 1
+ * key is at position (1,1) (row,col) on the keypad.
+ */
 
 #define KEY_1 		 KEY_PINS(1,1)
 #define KEY_2		 KEY_PINS(1,2)
@@ -55,9 +63,9 @@
 
 
 /**
- * Don't ask me why, but shit doesn't work if we switch I/O and try
- * to read again too quickly without delaying. 
- * Two NOPs was sufficient, then I changed to external oscilator...
+ * Don't ask me why, but shit doesn't work if we switch I/O and try to read
+ * again too quickly without delaying. This can likely be tweaked (2 NOPS
+ * should be sufficient @2MHz)
  */
 #define KEYPAD_SCAN_DELAY()	\
 	__asm__ __volatile__ ("nop");\
