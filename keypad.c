@@ -19,21 +19,23 @@
  * combination of (R,C) determines a unique key.
  */
 
+static void keypad_init_rowscan(void);
+static void keypad_init_colscan(void);
 
 volatile uint8_t keymask = 0;
 
-inline void keypad_int_enable(void) {
+void keypad_int_enable(void) {
 	KEYPAD_PORT.INTCTRL |= PORT_INT0LVL_MED_gc;
 }
 
-inline void keypad_int_disable(void) {
+void keypad_int_disable(void) {
 	KEYPAD_PORT.INTCTRL &= ~PORT_INT0LVL_MED_gc;
 }
 
 /**
  * Set cols as inputs to scan cols
  */
-inline void keypad_init_colscan(void) {
+static void keypad_init_colscan(void) {
 	//set rows to output 
 	KEYPAD_PORT.DIRSET = KEYPAD_ROWMASK;
 	//set value of rows to 0 
@@ -51,7 +53,7 @@ inline void keypad_init_colscan(void) {
 /**
  * Set rows as inputs to scan rows
  */
-inline void keypad_init_rowscan(void) {
+static void keypad_init_rowscan(void) {
 	//output on cols.
 	KEYPAD_PORT.DIRSET = KEYPAD_COLMASK;
 	//set cols to 0
@@ -64,7 +66,7 @@ inline void keypad_init_rowscan(void) {
 	KEYPAD_PINCTRL(R4) = PORT_OPC_PULLUP_gc;
 }
 
-inline void keypad_init() {
+void keypad_init(void) {
 
 	//initially, we set up to listen to changes
 	//on the column pins.
@@ -90,7 +92,7 @@ KEYPAD_ISR {
 	keypad_init_colscan();
 }
 
-inline uint8_t keypad_scan() {
+uint8_t keypad_scan(void) {
 	uint8_t tmp = keymask; 
 	keymask = 0;
 	return tmp;
