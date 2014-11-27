@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include "keypad.h"
 
 inline void servo_set_angle(uint8_t angle);
 int main(void) {
@@ -13,9 +14,33 @@ int main(void) {
 	PORTC.DIRSET = PIN0_bm;
 	PORTC.OUTCLR = PIN0_bm;
 
-	servo_set_angle(0);
+	//LED
+	PORTC.DIRSET = PIN1_bm;
+	PORTC.OUTSET = PIN1_bm;
 
-	while (1);
+	servo_set_angle(0);
+	keypad_init();
+
+	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
+	sei();
+
+
+	while (1) {
+		uint8_t msk;
+		if ((msk = keypad_scan())) {
+			keypad_int_disable();
+			char key = keypad_getchar(msk);
+
+			if (key == '*')
+				servo_set_angle(0);
+			else if (key == '0')
+				servo_set_angle(90);
+			else if (key == '#')
+				servo_set_angle(180);
+			keypad_int_enable();
+
+		}
+	}
 }
 
 inline void servo_set_angle(uint8_t angle) {
