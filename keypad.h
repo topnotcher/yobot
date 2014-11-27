@@ -63,9 +63,10 @@
 
 
 /**
+ *
  * Don't ask me why, but shit doesn't work if we switch I/O and try to read
  * again too quickly without delaying. This can likely be tweaked (2 NOPS
- * should be sufficient @2MHz)
+ * should be sufficient @2MHz).
  */
 #define KEYPAD_SCAN_DELAY()	\
 	__asm__ __volatile__ ("nop");\
