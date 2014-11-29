@@ -70,6 +70,11 @@ void display_test() {
 
 }
 
+void display_puts(char str[]) {
+	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i) 
+		display_buffer[2-i] = get_mapped_char(str[i]);
+	display_write();
+}
 
 void display_putchar(char c) {
 	display_buffer[0] = get_mapped_char(c);

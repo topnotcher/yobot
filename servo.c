@@ -1,6 +1,7 @@
 #include <avr/io.h>
 #include "keypad.h"
 #include "display.h"
+#include "adc.h"
 
 inline void servo_set_angle(uint8_t angle);
 int main(void) {
@@ -22,6 +23,7 @@ int main(void) {
 	servo_set_angle(0);
 	keypad_init();
 	display_init();
+	adc_init();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();

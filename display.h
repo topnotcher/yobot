@@ -29,6 +29,7 @@ void sclk_trigger(void);
 void display_write(void);
 void display_init(void);
 void display_putchar(char);
+void display_puts(char str[]);
 uint8_t get_mapped_char(char);
 void display_test(void);
 #endif
