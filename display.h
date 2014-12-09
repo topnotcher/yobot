@@ -2,11 +2,14 @@
 #define DISPLAY_H
 
 #define DISPLAY_PORT PORTC
+#define DISPLAY_SPI SPIC
+#define DISPLAY_SCLK_PIN 7
+#define DISPLAY_SOUT_PIN 5
+#define DISPLAY_XLAT_PIN 4
+#define DISPLAY_SPI_vect SPIC_INT_vect
 
-//LE
-#define XLAT 4
-#define SCLK 7
-#define SOUT 5
+
+
 
 
 #define DISPLAY_PORT_CONCAT3(a,b,c) a##b##c
@@ -24,8 +27,6 @@
 
 void sge_on(uint8_t n);
 void seg_off(uint8_t n);
-void xlat_trigger(void);
-void sclk_trigger(void);
 void display_write(void);
 void display_init(void);
 void display_putchar(char);

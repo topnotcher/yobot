@@ -1,11 +1,17 @@
 #include <util/delay.h>
 #include <avr/sleep.h>
+#include <util/atomic.h>
 #include <stdint.h>
 #include <avr/io.h>
 //#include <avr/interrupt.h>
 //#include <stdlib.h>
 
 #include "display.h"
+#define _SCLK_bm DISPLAY_PIN(DISPLAY_SCLK_PIN)
+#define _SOUT_bm DISPLAY_PIN(DISPLAY_SOUT_PIN)
+#define _XLAT_bm DISPLAY_PIN(DISPLAY_XLAT_PIN)
+
+static inline void xlat_trigger(void);
 
 const uint8_t display_charmap[][2] = {
 
@@ -45,7 +51,17 @@ const uint8_t display_charmap[][2] = {
 
 
 
-uint8_t display_buffer[DISPLAY_SIZE] = {0};
+static uint8_t display_buffer[DISPLAY_SIZE] = {0};
+typedef struct {
+	enum {
+		DISPLAY_STATUS_BUSY,
+		DISPLAY_STATUS_IDLE
+	} status;
+	uint8_t bytes;
+} display_state_t;
+
+static display_state_t state;
+
 
 uint8_t get_mapped_char(char c) {
 
@@ -67,7 +83,6 @@ void display_test() {
 		display_write();
 		_delay_ms(250);
 	}
-
 }
 
 
@@ -79,56 +94,56 @@ void display_putchar(char c) {
 	display_write();
 }
 
-inline void xlat_trigger() {
-	DISPLAY_PIN_HIGH(XLAT);
-	DISPLAY_PIN_LOW(XLAT);	
+static inline void xlat_trigger() {
+	DISPLAY_PIN_HIGH(DISPLAY_XLAT_PIN);
+	DISPLAY_PIN_LOW(DISPLAY_XLAT_PIN);
 }
 
-inline void sclk_trigger() {
-	DISPLAY_PIN_HIGH(SCLK);
-	DISPLAY_PIN_LOW(SCLK);
+static inline void display_write_byte(void) {
+	DISPLAY_SPI.DATA = display_buffer[state.bytes++];
 }
 
 void display_write() {	
-	//each element of the regsiter contains 12 bits...
-	//^^what does that comment mean???
-	
-	//foreach 7-segment display...
-	for ( uint8_t c = 0; c < DISPLAY_SIZE; c++ ) {
-		for ( uint8_t bit = 0; bit < 8; bit++ ) {
-			if ( (display_buffer[c]>>bit)&0x01 )
-				DISPLAY_PIN_HIGH(SOUT);
-			else
-				DISPLAY_PIN_LOW(SOUT);
-		
-			sclk_trigger();
-		}
+	//It is possible to call this while the previous data is still being
+	//written to the display. However, since the display is a giant shift
+	//register, this is irrelevant: any data already written and not latched
+	//will be shifted off the end of the register and replaced with the new
+	//data. Since the shift registers are buffered, impartial transfers will
+	//never be displayed. It is, however, possible that some bytes from the
+	//current buffer have been written, then the buffer is replaced, and then
+	//the remaining byte is written out before this runs. This is unlikely.
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		state.bytes = 0;
+		state.status = DISPLAY_STATUS_BUSY;
+		display_write_byte();
 	}
-
-	xlat_trigger();
 }
 
-
+ISR(DISPLAY_SPI_vect) {
+	if (state.bytes == DISPLAY_SIZE) {
+		xlat_trigger();
+		state.status = DISPLAY_STATUS_IDLE;
+	} else {
+		display_write_byte();
+	}
+}
 
 
 inline void display_init() {
 
-	DISPLAY_PORT.DIRSET = DISPLAY_PIN(SCLK) | DISPLAY_PIN(SOUT) | DISPLAY_PIN(XLAT);
-
-	//Data is read from SOUT on rising edge
-	DISPLAY_PIN_LOW(SCLK);
-
-	//Data is shifted when XLAT is high
+	DISPLAY_PORT.DIRSET = _SCLK_bm | _SOUT_bm | _XLAT_bm;
+	DISPLAY_PORT.OUTSET = _SCLK_bm | _SOUT_bm;
+	DISPLAY_PORT.OUTCLR = _XLAT_bm;
 	
-	DISPLAY_PIN_LOW(XLAT);
+	DISPLAY_SPI.CTRL = SPI_ENABLE_bm | SPI_MASTER_bm | SPI_PRESCALER_DIV4_gc | SPI_DORD_bm;
+	DISPLAY_SPI.INTCTRL = SPI_INTLVL_LO_gc;
 
-	//set everything high.
-	DISPLAY_PIN_HIGH(SOUT);
+	state.status = DISPLAY_STATUS_IDLE;
+	state.bytes = 0;
 	
 	for ( uint8_t i = 0; i < DISPLAY_SIZE; ++i ) 
 		display_buffer[i] = 0;
 
+	//this will not run until interrupts are enabled.
 	display_write();
-
-	_delay_ms(1);
 }
