@@ -5,7 +5,7 @@ F_CPU = 2000000
 C_DEFS=W_SOUNDS=0 DEBUG=0
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = servo.c keypad.c display.c
+SRC = servo.c keypad.c display.c adc.c
 
 #these are not ready for this hardware
 # ir_sensor.c lcd.c game.c
@@ -42,7 +42,7 @@ CFLAGS = -g -O$(OPT) \
 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
 -Wall -Wstrict-prototypes -Werror\
 -finline-functions -finline-functions-called-once -finline-limit=1000 -finline-small-functions\
--DF_CPU=$(F_CPU) \
+-DF_CPU=$(F_CPU) -lm \
 -Wa,-adhlns=$(patsubst %,$(TMP)/%,$(<:.c=.lst)) \
 $(patsubst %,-I%,$(EXTRAINCDIRS)) \
 $(patsubst %,-D%,$(C_DEFS))
