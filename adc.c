@@ -25,8 +25,6 @@ void adc_init(void) {
 
 	//ADC reference voltage is the AREF pin on PORTB
 	ADCB.REFCTRL |= ADC_REFSEL_AREFB_gc;
-	//ADCB.REFCTRL |= ADC_REFSEL_INTVCC2_gc;
-	//ADCB.REFCTRL |= ADC_REFSEL_INT1V_gc;
 
 	//xmegaA,299: read channel 0 in freerun
 	ADCB.EVCTRL |= ADC_SWEEP_0_gc;
@@ -55,46 +53,26 @@ uint8_t adc_get_temp(void) {
 
 	res /= max_readings;
 
-	//res -= 348;
+	/*
+	ADC reading gives us a voltage (res). We want a resistance. 
+	per avr1300:
+	res=(vi+.05*vref)/vref*4096
+	voltage divider: vi = R/(R+10k)*vref (series resistor is 10k)
+	substitute (R/(R+10k)*vref+dV)/vref*4096
+	also per AVR1300, dV = .05*vref, thus 
+	res =  (R/(R+10k)*vref+.05*vref)/vref*4096 = vref*(R/(R+10k)+.05)/vref*4096
+	now the vrefs cancel out
+	res = (R/(R+10k)+.05)*4096
+	we get: R = -(10k(5*res-1024))/(5*res-21504)
+	*/
 
-	//per avr1300
-	//res=(vi+.05*vref)/vref*4096
-	//voltage divider: vi = R/(R+10k)*vref
-	//substitute (R/(R+10k)*vref+dV)/vref*4096
-	//also per AVR1300, dV = .05*vref, thus 
-	//res =  (R/(R+10k)*vref+.05*vref)/vref*4096 = vref*(R/(R+10k)+.05)/vref*4096
-	//now the vrefs cancel out
-	//res = (R/(R+10k)+.05)*4096
-	//we get: R = -(10k(5*res-1024))/(5*res-21504)
-
-
-	//res = (4096.0)/(res-205)-1;
-	//res = 10000/res;
-	//GOOD using AREFB:
-	//3000 = 40s, 2000 = 80s, 2500 = 65, 2550 = 63, 2600 = 61 2650  = 59?
-	//res = 2712;
 	res = -1 * ((10000*(5*res - 1024))/(5*res-21504));
-	//res = -1 * ( (10000*(5*res-1024)) / ( 5*res - 1024*(20*3.271+1) ) );
-	//res = -1 * ((10000*(5*res-1024))/(5*res-41984));
-
-	double s;
-
 	//steinhart-hart: 1/T = 1/T0+1/B*log(R/R0)
-	s = 1.0 / (1.0/(25.0+273.15) + 1.0/3435.0 * log(res/10000));
-/*	
-	s = log(res/10000); 
-	s /= 3435;
-	s += 1.0 / (25+273.15);
-	s = 1.0/s;
-*/
+	double s = 1.0 / (1.0/(25.0+273.15) + 1.0/3435.0 * log(res/10000));
+
+	//convert from kelvin to fahrenheit
 	s = (s-273.15)*1.8+32.0;
 	
 
 	return (uint8_t)s;
 }
-
-	/*uint8_t temp = s;
-
-	//uint16_t k = ((double)res-205) /(4095.0) * 100;
-
-*/
