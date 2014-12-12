@@ -80,7 +80,7 @@ uint8_t adc_get_temp(void) {
 	double s;
 
 	//steinhart-hart: 1/T = 1/T0+1/B*log(R/R0)
-	s = 1.0 / (1.0/(25.0+273.15) + 1.0/3950.0 * log(res/10000));
+	s = 1.0 / (1.0/(25.0+273.15) + 1.0/3435.0 * log(res/10000));
 /*	
 	s = log(res/10000); 
 	s /= 3435;
