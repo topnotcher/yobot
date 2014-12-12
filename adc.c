@@ -3,39 +3,85 @@
 #include <avr/io.h>
 #include <math.h>
 #include <stddef.h>
-#include "display.h"
+#include "adc.h"
 
 #define max_readings 5
 static uint16_t readings[max_readings] = {0};
 
-void adc_init(void) {
-	//xmegaA, 38: required to load the calibration at runtime.
+static uint8_t adc_read_calibration_byte(const uint8_t offset) {
 	NVM.CMD = NVM_CMD_READ_CALIB_ROW_gc;
-	ADCB.CAL = pgm_read_byte(offsetof(NVM_PROD_SIGNATURES_t, ADCACAL0));
-	NVM.CMD = NVM_CMD_READ_CALIB_ROW_gc;
-	ADCB.CAL |= pgm_read_byte(offsetof(NVM_PROD_SIGNATURES_t, ADCACAL0))>>8;
+	uint8_t data = pgm_read_byte(offset);
 	NVM.CMD = NVM_CMD_NO_OPERATION_gc;
 
+	return data;
+}
 
-	ADCB.CTRLB |= ADC_FREERUN_bm;
+static void adc_calibrate(ADC_t *adc) {
+	//xmegaA, 38: required to load the calibration at runtime.
+
+	if (adc == &ADCA) {
+		adc->CAL = adc_read_calibration_byte(PRODSIGNATURES_ADCACAL0) | adc_read_calibration_byte(PRODSIGNATURES_ADCACAL1)<<8;
+	} else {
+		adc->CAL = adc_read_calibration_byte(PRODSIGNATURES_ADCBCAL0) | adc_read_calibration_byte(PRODSIGNATURES_ADCBCAL1)<<8;
+	}
+}
+
+void adc_init(void) {
+	ADC_t *adc = &ADCB;
+
+	adc_calibrate(adc);
+
+	adc_enable_freerun(adc,true);
 	//xmegaA, 297: 0 indicates unsigned conversion (default)
-	//12 bit resolutio, right aligned is also default, but set anyway.
-	ADCB.CTRLB &= ~ADC_CONMODE_bm & ~ADC_RESOLUTION_gm;
-	ADCB.CTRLB |= ADC_RESOLUTION_12BIT_gc;
+	//12 bit resolution, right aligned is also default, but set anyway.
+	adc_set_conmode(adc, 0);
+	adc_set_resolution(adc, ADC_RESOLUTION_12BIT_gc);
 
 	//ADC reference voltage is the AREF pin on PORTB
-	ADCB.REFCTRL |= ADC_REFSEL_AREFB_gc;
+	adc_set_ref(adc, ADC_REFSEL_AREFB_gc);
 
 	//xmegaA,299: read channel 0 in freerun
-	ADCB.EVCTRL |= ADC_SWEEP_0_gc;
+	adc_set_sweep(adc, ADC_SWEEP_0_gc);
 
-	ADCB.PRESCALER |= ADC_PRESCALER_DIV512_gc;
+	adc_set_prescaler(adc, ADC_PRESCALER_DIV512_gc);
 
-	ADCB.CH0.CTRL |= ADC_CH_INPUTMODE_SINGLEENDED_gc;
-	ADCB.CH0.INTCTRL |= ADC_CH_INTLVL_MED_gc;
-	ADCB.CH0.MUXCTRL |= ADC_CH_MUXPOS_PIN1_gc;
+	adc->CH0.CTRL |= ADC_CH_INPUTMODE_SINGLEENDED_gc;
+	adc->CH0.INTCTRL |= ADC_CH_INTLVL_MED_gc;
+	adc->CH0.MUXCTRL |= ADC_CH_MUXPOS_PIN1_gc;
 
-	ADCB.CTRLA |= ADC_ENABLE_bm;
+	adc_enable(adc);
+}
+
+void adc_set_conmode(ADC_t *adc, uint8_t mode) {
+	adc->CTRLB = (adc->CTRLB&(~ADC_CONMODE_bm)) | mode;
+}
+
+void adc_set_resolution(ADC_t *adc, uint8_t res) {
+	adc->CTRLB = (adc->CTRLB&(~ADC_RESOLUTION_gm)) | res;
+}
+
+void adc_set_ref(ADC_t *adc, uint8_t ref) {
+	adc->REFCTRL = ref;
+}
+
+void adc_set_sweep(ADC_t *adc, uint8_t sweep) {
+	adc->EVCTRL = (adc->EVCTRL&(~ADC_SWEEP_gm)) | sweep;
+}
+
+void adc_set_prescaler(ADC_t *adc, uint8_t prescaler) {
+	adc->PRESCALER = prescaler;
+}
+
+void adc_enable_freerun(ADC_t *adc, bool enable) {
+	adc->CTRLB = (adc->CTRLB&(~ADC_FREERUN_bm)) | (enable ? ADC_FREERUN_bm : 0);
+}
+
+void adc_enable(ADC_t *adc) {
+	adc->CTRLA |= ADC_ENABLE_bm;
+}
+
+void adc_disable(ADC_t *adc) {
+	adc->CTRLA &= ~ADC_ENABLE_bm;
 }
 
 ISR(ADCB_CH0_vect) {
