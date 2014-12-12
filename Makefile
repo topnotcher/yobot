@@ -5,7 +5,7 @@ F_CPU = 2000000
 C_DEFS=W_SOUNDS=0 DEBUG=0
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c servo.c keypad.c display.c adc.c temp.c
+SRC = main.c servo.c keypad.c display.c adc.c temp.c ssr.c
 
 #these are not ready for this hardware
 # ir_sensor.c lcd.c game.c

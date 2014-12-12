@@ -15,4 +15,11 @@
 
 // beta value
 #define CONFIG_THERMISTOR_BETA 3435
+
+/**
+ * Solid state relay configuration
+ */
+
+#define CONFIG_SSR_PORT PORTB
+#define CONFIG_SSR_PIN 2
 #endif

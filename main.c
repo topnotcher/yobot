@@ -3,14 +3,15 @@
 #include "display.h"
 #include "temp.h"
 #include "servo.h"
+#include "ssr.h"
 
 static inline void tea_off(void) {
-	PORTB.OUTCLR = PIN2_bm;
+	ssr_off();
 	servo_set_angle(0);
 }
 
 static inline void tea_on(void) {
-	PORTB.OUTSET = PIN2_bm;
+	ssr_on();
 	servo_set_angle(180);
 }
 
@@ -19,11 +20,9 @@ int main(void) {
 	keypad_init();
 	display_init();
 	thermistor_init();
+	ssr_init();
 	
-	/** TEA INIT
-	 */
 
-	PORTB.DIRSET = PIN2_bm;
 	tea_off();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;

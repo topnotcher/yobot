@@ -1,8 +1,6 @@
 #include <avr/io.h>
 #include "servo.h"
 
-
-
 void servo_init(void) {
 	//xmegaA, pp160. In frequency generation mode, freq = clk/(2N(CCA+1)), N = prescaler
 	//also pp160, freq = clk/(N(PER+1))
