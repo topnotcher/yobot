@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include "keypad.h"
 #include "display.h"
-#include "adc.h"
+#include "temp.h"
 
 inline void servo_set_angle(uint8_t angle);
 static inline void tea_off(void) {
@@ -32,7 +32,7 @@ int main(void) {
 
 	keypad_init();
 	display_init();
-	adc_init();
+	thermistor_init();
 	
 	/** TEA INIT
 	 */
@@ -60,7 +60,7 @@ int main(void) {
 			keypad_int_enable();
 		}
 
-		uint8_t temp = adc_get_temp();
+		uint8_t temp = thermistor_read_temp();
 		if (temp >= 190) {
 			tea_off();
 		}

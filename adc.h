@@ -1,9 +1,8 @@
 #include <stdbool.h>
+#include <avr/io.h>
 #ifndef ADC_H
 #define ADC_H
-void adc_init(void);
-uint8_t adc_get_temp(void);
-
+void adc_init(ADC_t *adc);
 
 void adc_set_conmode(ADC_t *adc, uint8_t mode);
 void adc_set_resolution(ADC_t *adc, uint8_t res);
