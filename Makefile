@@ -2,10 +2,8 @@
 MCU = atxmega128a1u
 F_CPU = 2000000
 
-C_DEFS=W_SOUNDS=0 DEBUG=0
-
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c servo.c keypad.c display.c adc.c temp.c ssr.c
+SRC = main.c servo.c keypad.c display.c adc.c temp.c ssr.c timer.c mempool.c malloc.c
 
 #these are not ready for this hardware
 # ir_sensor.c lcd.c game.c
@@ -44,8 +42,7 @@ CFLAGS = -g -O$(OPT) \
 -finline-functions -finline-functions-called-once -finline-limit=1000 -finline-small-functions\
 -DF_CPU=$(F_CPU) -lm \
 -Wa,-adhlns=$(patsubst %,$(TMP)/%,$(<:.c=.lst)) \
-$(patsubst %,-I%,$(EXTRAINCDIRS)) \
-$(patsubst %,-D%,$(C_DEFS))
+$(patsubst %,-I%,$(EXTRAINCDIRS))
 
 #-finline-functions -finline-functions-called-once -finline-limit=1000 -finline-small-functions\
 # Set a "language standard" compiler flag.

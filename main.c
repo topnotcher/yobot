@@ -4,6 +4,7 @@
 #include "temp.h"
 #include "servo.h"
 #include "ssr.h"
+#include "timer.h"
 
 static inline void tea_off(void) {
 	ssr_off();
@@ -14,6 +15,16 @@ static inline void tea_on(void) {
 	ssr_on();
 	servo_set_angle(180);
 }
+static void tea_display_temp(void) {
+	uint8_t temp = thermistor_read_temp();
+	char foo[] = {0,0,0};
+	foo[2] = temp % 10 + 0x30;
+	temp /= 10;
+	foo[1] = temp % 10 + 0x30;
+	temp /= 10;
+	foo[0] = temp % 10 + 0x30;
+	display_puts(foo); 
+}
 
 int main(void) {
 	servo_init();
@@ -21,6 +32,7 @@ int main(void) {
 	display_init();
 	thermistor_init();
 	ssr_init();
+	init_timers();
 	
 
 	tea_off();
@@ -28,7 +40,9 @@ int main(void) {
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();
 
-	uint8_t k = 0;
+	//update the temperature display once per second
+	add_timer(tea_display_temp, TIMER_HZ, TIMER_RUN_UNLIMITED);
+
 	while (1) {
 		char key;
 		if ((key = keypad_getc())) {
@@ -48,16 +62,6 @@ int main(void) {
 		uint8_t temp = thermistor_read_temp();
 		if (temp >= 190) {
 			tea_off();
-		}
-
-		if (++k == 255) {
-			char foo[] = {0,0,0};
-			foo[2] = temp % 10 + 0x30;
-			temp /= 10;
-			foo[1] = temp % 10 + 0x30;
-			temp /= 10;
-			foo[0] = temp % 10 + 0x30;
-			display_puts(foo); 
 		}
 	}
 }
