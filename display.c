@@ -88,12 +88,12 @@ static uint8_t get_mapped_char(char c) {
  * Call repeatedly with a delay to test the segments
  */
 void display_test() {
-	static uint8_t i = 0;
-	uint8_t val = 1<<i;
-	display_buffer[0] = display_buffer[1] = display_buffer[2] = val;
+	static uint8_t bit = 0;
+	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i)
+		display_buffer[i] = 1<<bit;
 	display_write();
-	if (++i == 8)
-		i = 0;
+	if (++bit == 8)
+		bit = 0;
 }
 
 /**
