@@ -100,6 +100,22 @@ void display_putchar(char c) {
 	display_write();
 }
 
+void display_puti(uint8_t n) {
+	char str[DISPLAY_SIZE] = {0};
+	//least significant digit first
+	for (int8_t i = DISPLAY_SIZE-1; i >= 0; --i) {
+		uint8_t digit = n%10;
+
+		//don't print leading zeroes
+		if (digit == 0 && i < 2)
+			break;
+
+		str[i] = digit + 0x30;
+		n /= 10;
+	}
+	display_puts(str);
+}
+
 static inline void xlat_trigger() {
 	DISPLAY_PIN_HIGH(DISPLAY_XLAT_PIN);
 	DISPLAY_PIN_LOW(DISPLAY_XLAT_PIN);

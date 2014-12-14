@@ -16,20 +16,7 @@ static inline void tea_on(void) {
 	servo_set_angle(180);
 }
 static void tea_display_temp(void) {
-	uint8_t temp = thermistor_read_temp();
-	char foo[] = {0,0,0};
-	//least significant digit first
-	for (int8_t i = 2; i >= 0; --i) {
-		uint8_t digit = temp%10;
-
-		//don't print leading zeroes
-		if (digit == 0 && i < 2)
-			break;
-
-		foo[i] = digit + 0x30;
-		temp /= 10;
-	}
-	display_puts(foo); 
+	display_puti(thermistor_read_temp());
 }
 
 int main(void) {
