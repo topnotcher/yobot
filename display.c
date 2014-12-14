@@ -12,6 +12,9 @@
 #define _XLAT_bm DISPLAY_PIN(DISPLAY_XLAT_PIN)
 
 static inline void xlat_trigger(void);
+static inline void display_write_byte(void);
+static void display_write(void);
+static uint8_t get_mapped_char(char);
 
 const uint8_t display_charmap[][2] = {
 
@@ -49,8 +52,6 @@ const uint8_t display_charmap[][2] = {
 
 };
 
-
-
 static uint8_t display_buffer[DISPLAY_SIZE] = {0};
 typedef struct {
 	enum {
@@ -63,7 +64,7 @@ typedef struct {
 static display_state_t state;
 
 
-uint8_t get_mapped_char(char c) {
+static uint8_t get_mapped_char(char c) {
 
 	for ( uint8_t i = 0; i <= 255; ++i ) {
 		if ( display_charmap[i][0] == c )
@@ -108,7 +109,7 @@ static inline void display_write_byte(void) {
 	DISPLAY_SPI.DATA = display_buffer[state.bytes++];
 }
 
-void display_write() {	
+static void display_write() {	
 	//It is possible to call this while the previous data is still being
 	//written to the display. However, since the display is a giant shift
 	//register, this is irrelevant: any data already written and not latched
