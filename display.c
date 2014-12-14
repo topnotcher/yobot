@@ -3,10 +3,9 @@
 #include <util/atomic.h>
 #include <stdint.h>
 #include <avr/io.h>
-//#include <avr/interrupt.h>
-//#include <stdlib.h>
-
 #include "display.h"
+#include "config.h"
+
 #define _SCLK_bm DISPLAY_PIN(DISPLAY_SCLK_PIN)
 #define _SOUT_bm DISPLAY_PIN(DISPLAY_SOUT_PIN)
 #define _XLAT_bm DISPLAY_PIN(DISPLAY_XLAT_PIN)

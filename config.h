@@ -22,4 +22,18 @@
 
 #define CONFIG_SSR_PORT PORTB
 #define CONFIG_SSR_PIN 2
+
+/**
+ * Display configuration
+ */
+
+#define DISPLAY_PORT PORTC
+#define DISPLAY_SPI SPIC
+#define DISPLAY_SCLK_PIN 7
+#define DISPLAY_SOUT_PIN 5
+#define DISPLAY_XLAT_PIN 4
+#define DISPLAY_SPI_vect SPIC_INT_vect
+//three digits.
+#define DISPLAY_SIZE 3
+
 #endif
