@@ -18,11 +18,17 @@ static inline void tea_on(void) {
 static void tea_display_temp(void) {
 	uint8_t temp = thermistor_read_temp();
 	char foo[] = {0,0,0};
-	foo[2] = temp % 10 + 0x30;
-	temp /= 10;
-	foo[1] = temp % 10 + 0x30;
-	temp /= 10;
-	foo[0] = temp % 10 + 0x30;
+	//least significant digit first
+	for (int8_t i = 2; i >= 0; --i) {
+		uint8_t digit = temp%10;
+
+		//don't print leading zeroes
+		if (digit == 0 && i < 2)
+			break;
+
+		foo[i] = digit + 0x30;
+		temp /= 10;
+	}
 	display_puts(foo); 
 }
 
