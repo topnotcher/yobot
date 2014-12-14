@@ -15,8 +15,12 @@ static inline void display_write_byte(void);
 static void display_write(void);
 static uint8_t get_mapped_char(char);
 
-const uint8_t display_charmap[][2] = {
-
+/**
+ * This is a mapping of char => segments. The binary numbers indicate what
+ * segments need to be turned on to display the given character
+ * e.g. 0 requires all of the outer segments: ABCDEF = 0b11111100
+ */
+static const uint8_t display_charmap[][2] = {
 	//ABCDEFG.
 	{ '0', 0b11111100 },
 	{ '1', 0b01100000 },
@@ -52,7 +56,9 @@ const uint8_t display_charmap[][2] = {
 };
 
 static uint8_t display_buffer[DISPLAY_SIZE] = {0};
+
 typedef struct {
+	//state machine for controlling the SPI
 	enum {
 		DISPLAY_STATUS_BUSY,
 		DISPLAY_STATUS_IDLE
@@ -62,7 +68,9 @@ typedef struct {
 
 static display_state_t state;
 
-
+/**
+ * Given a character (c), return the segments required to display c
+ */
 static uint8_t get_mapped_char(char c) {
 
 	for ( uint8_t i = 0; i <= 255; ++i ) {
@@ -85,12 +93,18 @@ void display_test() {
 	}
 }
 
+/**
+ * Write a string to the display
+ */
 void display_puts(char str[]) {
 	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i) 
 		display_buffer[2-i] = get_mapped_char(str[i]);
 	display_write();
 }
 
+/*
+ * write a character to the display (fill all digits)
+ */
 void display_putchar(char c) {
 	display_buffer[0] = get_mapped_char(c);
 	display_buffer[1] = get_mapped_char(c);
@@ -99,6 +113,9 @@ void display_putchar(char c) {
 	display_write();
 }
 
+/**
+ * write an 'integer' to the display
+ */
 void display_puti(uint8_t n) {
 	char str[DISPLAY_SIZE] = {0};
 	//least significant digit first
@@ -149,8 +166,10 @@ ISR(DISPLAY_SPI_vect) {
 	}
 }
 
-
-inline void display_init() {
+/**
+ * Perform initialization of state and hardware
+ */
+void display_init() {
 
 	DISPLAY_PORT.DIRSET = _SCLK_bm | _SOUT_bm | _XLAT_bm;
 	DISPLAY_PORT.OUTSET = _SCLK_bm | _SOUT_bm;
