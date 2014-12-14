@@ -6,19 +6,42 @@
 #include "ssr.h"
 #include "timer.h"
 
+static enum {
+	TEA_STATUS_UNKNOWN,
+	TEA_STATUS_ON,
+	TEA_STATUS_OFF
+} tea_status;
+
+static void tea_display_temp(void) {
+	display_puti(thermistor_read_temp());
+}
+
 static inline void tea_off(void) {
+	//do fun stuff while no tea is brewing
+	if (tea_status == TEA_STATUS_OFF)
+		return;
+
+	del_timer(tea_display_temp);
+	add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
+	tea_status = TEA_STATUS_OFF;
 	ssr_off();
 	servo_set_angle(0);
 }
 
 static inline void tea_on(void) {
+	if (tea_status == TEA_STATUS_ON)
+		return;
+
+	//update the temperature display once per second
+	add_timer(tea_display_temp, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
+	del_timer(display_test);
+
+	tea_status = TEA_STATUS_ON;
 	ssr_on();
 	servo_set_angle(180);
 }
-static void tea_display_temp(void) {
-	display_puti(thermistor_read_temp());
-}
 
+#include <util/delay.h>
 int main(void) {
 	servo_init();
 	keypad_init();
@@ -33,8 +56,10 @@ int main(void) {
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();
 
-	//update the temperature display once per second
-	add_timer(tea_display_temp, TIMER_HZ, TIMER_RUN_UNLIMITED);
+	/*while(1) {
+		display_test();
+		_delay_ms(250);
+	}*/
 
 	while (1) {
 		char key;
