@@ -49,17 +49,11 @@ int main(void) {
 	thermistor_init();
 	ssr_init();
 	init_timers();
-	
 
 	tea_off();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();
-
-	/*while(1) {
-		display_test();
-		_delay_ms(250);
-	}*/
 
 	while (1) {
 		char key;

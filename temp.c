@@ -52,12 +52,12 @@ uint8_t thermistor_read_temp(void) {
 	res /= CONFIG_TEMPERATURE_READINGS;
 
 	/*
-	ADC reading gives us a voltage (res). We want a resistance. 
+	ADC reading gives us a voltage (res). We want a resistance.
 	per avr1300:
 	res=(vi+.05*vref)/vref*4096
 	voltage divider: vi = R/(R+10k)*vref (series resistor is 10k)
 	substitute (R/(R+10k)*vref+dV)/vref*4096
-	also per AVR1300, dV = .05*vref, thus 
+	also per AVR1300, dV = .05*vref, thus
 	res =  (R/(R+10k)*vref+.05*vref)/vref*4096 = vref*(R/(R+10k)+.05)/vref*4096
 	now the vrefs cancel out
 	res = (R/(R+10k)+.05)*4096
@@ -72,6 +72,6 @@ uint8_t thermistor_read_temp(void) {
 
 	//convert from kelvin to fahrenheit
 	s = (s-273.15)*1.8+32.0;
-	
+
 	return (uint8_t)s;
 }

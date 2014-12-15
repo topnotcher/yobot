@@ -11,7 +11,7 @@
  * separate pin (3x4: 7 pins total). Each key has a location represented by
  * (row,col) (top->right). When the key at (R,C) is pressed, it connects the
  * row R pin to the col C pin.
- * 
+ *
  * Since any given pin on the AVR can only be an input or an output at a point
  * in time, the row and the column must be read separately. This requires
  * switching the outputs to inputs and the inputs to outputs. Initially the
@@ -37,12 +37,12 @@ void keypad_int_disable(void) {
  * Set cols as inputs to scan cols
  */
 static void keypad_init_colscan(void) {
-	//set rows to output 
+	//set rows to output
 	KEYPAD_PORT.DIRSET = KEYPAD_ROWMASK;
-	//set value of rows to 0 
+	//set value of rows to 0
 	KEYPAD_PORT.OUTCLR = KEYPAD_ROWMASK;
 
-	//set cols to input 
+	//set cols to input
 	KEYPAD_PORT.DIRCLR = KEYPAD_COLMASK;
 
 	//set pullup on cols (well this blows!)
@@ -82,7 +82,7 @@ void keypad_init(void) {
 KEYPAD_ISR {
 	PORTC.OUT ^= PIN1_bm;
 	//cols are already setup to scan.
-	keymask = ~KEYPAD_PORT.IN & KEYPAD_COLMASK;	
+	keymask = ~KEYPAD_PORT.IN & KEYPAD_COLMASK;
 
 	if ( keymask == 0 )
 		return;
@@ -99,7 +99,7 @@ KEYPAD_ISR {
 char keypad_getc(void) {
 	uint8_t tmp;
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-		tmp = keymask; 
+		tmp = keymask;
 		keymask = 0;
 	}
 

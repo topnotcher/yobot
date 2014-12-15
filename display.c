@@ -28,10 +28,10 @@ static const uint8_t display_charmap[][2] = {
 	{ '3', 0b11110010 },
 	{ '4', 0b01100110 },
 	{ '5', 0b10110110 },
-	{ '6', 0b10111110 }, 
+	{ '6', 0b10111110 },
 	{ '7', 0b11100000 },
 	{ '8', 0b11111110 },
-	{ '9', 0b11100110 }, 
+	{ '9', 0b11100110 },
 	{ '-', 0b00000010 },
 	{ 'E', 0b10011110 },
 	{ 'F', 0b10001110 },
@@ -102,7 +102,7 @@ void display_test() {
  * Write a string to the display
  */
 void display_puts(char str[]) {
-	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i) 
+	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i)
 		display_buffer[2-i] = get_mapped_char(str[i]);
 	display_write();
 }
