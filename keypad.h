@@ -1,28 +1,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdint.h>
+#include "config.h"
 
 #ifndef KEYPAD_H
 #define KEYPAD_H
-
-/**
- * PORT and interrupt vector for keypad pins.
- */
-#define KEYPAD_PORT PORTA
-#define KEYPAD_ISR ISR(PORTA_INT0_vect)
-
-/**
- * Map the port pins to the keypad rows columns.
- * "KEYPAD_PIN_R2 6" means row 2 on the keypad is 
- * connected to PIN6 on the port. 
- */
-#define KEYPAD_PIN_R1 1
-#define KEYPAD_PIN_R2 6
-#define KEYPAD_PIN_R3 5
-#define KEYPAD_PIN_R4 3
-#define KEYPAD_PIN_C1 2
-#define KEYPAD_PIN_C2 0
-#define KEYPAD_PIN_C3 4
 
 /**
  * No configuration required beyond this point.
