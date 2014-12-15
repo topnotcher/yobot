@@ -80,7 +80,6 @@ void keypad_init(void) {
  * Interrupt Service Routine that triggers when a PIN value changes.
  */
 KEYPAD_ISR {
-	PORTC.OUT ^= PIN1_bm;
 	//cols are already setup to scan.
 	keymask = ~KEYPAD_PORT.IN & KEYPAD_COLMASK;
 

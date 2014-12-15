@@ -50,17 +50,10 @@
  * again too quickly without delaying. This can likely be tweaked (2 NOPS
  * should be sufficient @2MHz).
  */
-#define KEYPAD_SCAN_DELAY()	\
-	__asm__ __volatile__ ("nop");\
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop")
+#define KEYPAD_SCAN_DELAY()	do {\
+		__asm__ __volatile__ ("nop");\
+		__asm__ __volatile__ ("nop");\
+	} while (0)
 
 
 

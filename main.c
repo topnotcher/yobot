@@ -22,7 +22,7 @@ static inline void tea_off(void) {
 		return;
 
 	del_timer(tea_display_temp);
-	add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
+	//add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
 	tea_status = TEA_STATUS_OFF;
 	ssr_off();
 	servo_set_angle(0);
@@ -34,7 +34,7 @@ static inline void tea_on(void) {
 
 	//update the temperature display once per second
 	add_timer(tea_display_temp, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
-	del_timer(display_test);
+	//del_timer(display_test);
 
 	tea_status = TEA_STATUS_ON;
 	ssr_on();
@@ -61,7 +61,7 @@ int main(void) {
 			// GREG: Why are interrupts being disabled here?
 			// test without disabling (should work) !!!!!
 			keypad_int_disable();
-			//display_putchar(key);
+			display_putchar(key);
 
 			if (key == '*') {
 				tea_off();
