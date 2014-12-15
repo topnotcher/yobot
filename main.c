@@ -58,9 +58,6 @@ int main(void) {
 	while (1) {
 		char key;
 		if ((key = keypad_getc())) {
-			// GREG: Why are interrupts being disabled here?
-			// test without disabling (should work) !!!!!
-			keypad_int_disable();
 			display_putchar(key);
 
 			if (key == '*') {
@@ -70,7 +67,6 @@ int main(void) {
 			} else if (key == '#') {
 				tea_on();
 			}
-			keypad_int_enable();
 		}
 
 		uint8_t temp = thermistor_read_temp();
