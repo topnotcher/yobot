@@ -9,9 +9,6 @@
 #define TIMER_INTERRUPT_VECTOR RTC_COMP_vect
 
 #define TIMER_HZ 1000
-//TEMP - IFDK why it's running 2x as fast
-//#define TIMER_HZ 131071
-//#define TIMER_HZ 62652
 // the number of microseconds per tick.
 #define TIMER_TICK_US (1000000/TIMER_HZ)
 

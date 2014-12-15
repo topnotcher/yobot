@@ -16,9 +16,9 @@ typedef struct {
 	mempool_block_t blocks[]; 
 } mempool_t;
 
-mempool_t * init_mempool(const uint8_t buffsize, const uint8_t blocks);
+mempool_t *init_mempool(const uint8_t buffsize, const uint8_t blocks);
 
-void *mempool_alloc(mempool_t * pool); 
+void *mempool_alloc(mempool_t *pool); 
 
 /**
  * Get a pointer to the block given membool_block_t.block (buffer)
