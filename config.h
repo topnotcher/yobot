@@ -9,7 +9,9 @@
 #define CONFIG_TEMPERATURE_READINGS 5
 
 // use this ADC (exclusive access)
-#define CONFIG_TEMPERATURE_ADC ADCB
+#define CONFIG_TEMPERATURE_ADC ADCA
+
+//@TODO channel is hard coded
 
 // resistance at 25 celsius  (for use in steinhart-hart beta paremeter)
 // NOTE: The code currently _assumes_ the series resistor is 10k

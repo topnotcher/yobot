@@ -31,17 +31,18 @@ void thermistor_init(void) {
 
 	adc->CH0.CTRL |= ADC_CH_INPUTMODE_SINGLEENDED_gc;
 	adc->CH0.INTCTRL |= ADC_CH_INTLVL_MED_gc;
-	adc->CH0.MUXCTRL |= ADC_CH_MUXPOS_PIN1_gc;
+	adc->CH0.MUXCTRL |= ADC_CH_MUXPOS_PIN9_gc;
 
 	adc_enable(adc);
 }
 
-ISR(ADCB_CH0_vect) {
+//@TODO
+ISR(ADCA_CH0_vect) {
 	//0...3 0->1, 1->2
 	for (int8_t i = CONFIG_TEMPERATURE_READINGS-2; i >= 0; --i)
 		readings[i+1] = readings[i];
 
-	readings[0] = ADCB.CH0.RES;
+	readings[0] = ADCA.CH0.RES;
 }
 
 uint8_t thermistor_read_temp(void) {
