@@ -58,6 +58,8 @@ int main(void) {
 	while (1) {
 		char key;
 		if ((key = keypad_getc())) {
+			// GREG: Why are interrupts being disabled here?
+			// test without disabling (should work) !!!!!
 			keypad_int_disable();
 			//display_putchar(key);
 
