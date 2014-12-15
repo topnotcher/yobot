@@ -26,6 +26,7 @@ static inline void tea_off(void) {
 	tea_status = TEA_STATUS_OFF;
 	ssr_off();
 	servo_set_angle(0);
+	display_puts("   ");
 }
 
 static inline void tea_on(void) {
@@ -57,8 +58,6 @@ int main(void) {
 	while (1) {
 		char key;
 		if ((key = keypad_getc())) {
-			display_putchar(key);
-
 			if (key == '*') {
 				tea_off();
 			} else if (key == '0') {
