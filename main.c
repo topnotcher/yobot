@@ -41,7 +41,6 @@ static inline void tea_on(void) {
 	servo_set_angle(180);
 }
 
-#include <util/delay.h>
 int main(void) {
 	servo_init();
 	keypad_init();
