@@ -12,6 +12,8 @@ static enum {
 	TEA_STATUS_OFF
 } tea_status;
 
+static void handle_key(const char key);
+
 static void tea_display_temp(void) {
 	display_puti(thermistor_read_temp());
 }
@@ -57,19 +59,22 @@ int main(void) {
 
 	while (1) {
 		char key;
-		if ((key = keypad_getc())) {
-			if (key == '*') {
-				tea_off();
-			} else if (key == '0') {
-				servo_set_angle(90);
-			} else if (key == '#') {
-				tea_on();
-			}
-		}
+		if ((key = keypad_getc()))
+			handle_key(key);
 
 		uint8_t temp = thermistor_read_temp();
 		if (temp >= 190) {
 			tea_off();
 		}
+	}
+}
+
+static void handle_key(const char key) {
+	if (key == '*') {
+		tea_off();
+	} else if (key == '0') {
+		servo_set_angle(90);
+	} else if (key == '#') {
+		tea_on();
 	}
 }
