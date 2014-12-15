@@ -51,13 +51,13 @@
  * "KEYPAD_PIN_R2 6" means row 2 on the keypad is 
  * connected to PIN6 on the port (PA6). 
  */
-#define KEYPAD_PIN_R1 1
-#define KEYPAD_PIN_R2 6
-#define KEYPAD_PIN_R3 5
+#define KEYPAD_PIN_R1 6
+#define KEYPAD_PIN_R2 0
+#define KEYPAD_PIN_R3 1
 #define KEYPAD_PIN_R4 3
-#define KEYPAD_PIN_C1 2
-#define KEYPAD_PIN_C2 0
-#define KEYPAD_PIN_C3 4
+#define KEYPAD_PIN_C1 4
+#define KEYPAD_PIN_C2 5
+#define KEYPAD_PIN_C3 2
 
 
 #endif
