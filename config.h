@@ -23,7 +23,7 @@
 /***************************************
  * Solid state relay configuration
  **************************************/
-#define CONFIG_SSR_PORT PORTB
+#define CONFIG_SSR_PORT PORTC
 #define CONFIG_SSR_PIN 2
 
 /***************************************
