@@ -50,7 +50,7 @@ static const uint8_t display_charmap[][2] = {
 	{ 'o', 0b00111010 },
 	{ '_', 0b00010000 },
 	{ ' ', 0b00000000 },
-	{ 'r', 0b10001100 },
+	{ 'r', 0b11001100 },
 
 	//null: leave this last.
 	{ '\0',0b00000000 },
