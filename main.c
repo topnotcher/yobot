@@ -1,10 +1,12 @@
 #include <avr/io.h>
+#include <util/delay.h>
 #include "keypad.h"
 #include "display.h"
 #include "temp.h"
 #include "servo.h"
 #include "ssr.h"
 #include "timer.h"
+#include "mp3.h"
 
 
 static uint8_t tea_set_point = 0;
@@ -74,10 +76,12 @@ static void tea_tick(void) {
 	} else if (tea_state == TEA_STATE_STEEP) {
 		//tea done
 		display_puti(tea_ticks);
-		if (tea_ticks == 0)
+		if (tea_ticks == 0) {
 			tea_off();
-		else 
+			//mp3_play(6);
+		} else {
 			--tea_ticks;
+		}
 	}
 }
 
@@ -99,11 +103,32 @@ static void tea_off(void) {
 }
 
 static void tea_set_temperature(uint16_t temp) {
+	//001_180-190.mp3  002_190-200.mp3  003_200-212.mp3  004_212+.mp3  005_buttons.mp3  006_done.mp3  007_stop.mp3  008_success.mp3  009_under180.mp3      010_welcome.mp3
+	//
 	if (temp < TEA_TEMP_MIN || temp > TEA_TEMP_MAX) {
 		display_puts("Err");
+	
+		if (temp < 180) {
+			//9 is playing success, 10 is playing welcome????
+			//5 is supposed to be buttons
+			mp3_play(5);
+		} else if (temp < 190) {
+			mp3_play(1);
+		} else if (temp < 200) {
+			mp3_play(2);
+		} else if (temp < 212) {
+			mp3_play(3);
+		} else if (temp >= 212) {
+			mp3_play(4);
+		}
+		
 	} else {
 		tea_set_point = temp;
 		display_puti(temp);
+		//should be 8, but actually 9
+		// 8 is stop...
+		// buttons is...
+		mp3_play(9);
 	}
 }
 
@@ -111,6 +136,7 @@ static void tea_on(void) {
 	if (device_state == DEV_STATE_BREW)
 		return;
 
+	mp3_play(3);
 	//update the temperature display once per second
 	add_timer(tea_tick, TIMER_HZ, TIMER_RUN_UNLIMITED);
 	//del_timer(display_test);
@@ -121,17 +147,26 @@ static void tea_on(void) {
 }
 
 int main(void) {
+	//allow everything to settle/boot/etc
+	_delay_ms(500);
+
 	servo_init();
 	keypad_init();
 	display_init();
 	thermistor_init();
 	ssr_init();
 	init_timers();
+	mp3_init();
 
 	tea_off();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();
+
+	//another 100 for things to settle
+	_delay_ms(100);
+
+	mp3_play(10);
 
 	while (1) {
 		char key;
@@ -148,7 +183,8 @@ static void handle_key(const char key) {
 	if (device_state == DEV_STATE_BREW) {
 		if (key == '*')
 			tea_off();
-		//tea should handle all these keys
+		//7 is 'absolutely awful cuppa'
+		mp3_play(5);
 	} else if (device_state == DEV_STATE_IDLE) {
 		handle_key_idle(key);
 	} else {
