@@ -9,11 +9,24 @@
 
 static uint8_t tea_set_point = 0;
 
+/**
+ * Whether or not the device is brewing tea
+ */
 static enum {
 	DEV_STATE_UNKNOWN,
 	DEV_STATE_BREW,
 	DEV_STATE_IDLE
 } device_state;
+
+
+/**
+ * Progress in the tea brewing cycle
+ */
+static enum {
+	TEA_STATE_HEAT,
+	TEA_STATE_STEEP
+} tea_state;
+static uint8_t tea_ticks;
 
 typedef struct {
 	enum {
@@ -37,22 +50,43 @@ static void handle_key(const char key);
 static void handle_key_idle(const char key);
 static void handle_temperature_digit(const uint8_t digit);
 static void tea_set_temperature(uint16_t temp);
+static void tea_tick(void);
+static void tea_off(void);
+static void tea_on(void);
 
 static void clear_temp_state(void) {
 	temp_entry.state = TEMP_STATE_NONE;
 	display_puts("---");
 }
 
-static void tea_display_temp(void) {
-	display_puti(thermistor_read_temp());
+static void tea_tick(void) {
+	if (tea_state == TEA_STATE_HEAT) {
+		uint8_t temp = thermistor_read_temp();
+		display_puti(temp);
+
+		if (temp >= tea_set_point) {
+			ssr_off();
+			servo_set_angle(180);
+			tea_state = TEA_STATE_STEEP;
+			tea_ticks = TEA_STEEP_TIME;
+		}
+
+	} else if (tea_state == TEA_STATE_STEEP) {
+		//tea done
+		display_puti(tea_ticks);
+		if (tea_ticks == 0)
+			tea_off();
+		else 
+			--tea_ticks;
+	}
 }
 
-static inline void tea_off(void) {
+static void tea_off(void) {
 	//do fun stuff while no tea is brewing
-	if (device_state == DEV_STATE_IDLE)
-		return;
+	//if (device_state == DEV_STATE_IDLE)
+		//return;
 
-	del_timer(tea_display_temp);
+	del_timer(tea_tick);
 	//add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
 	device_state = DEV_STATE_IDLE;
 	ssr_off();
@@ -73,17 +107,17 @@ static void tea_set_temperature(uint16_t temp) {
 	}
 }
 
-static inline void tea_on(void) {
+static void tea_on(void) {
 	if (device_state == DEV_STATE_BREW)
 		return;
 
 	//update the temperature display once per second
-	add_timer(tea_display_temp, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
+	add_timer(tea_tick, TIMER_HZ, TIMER_RUN_UNLIMITED);
 	//del_timer(display_test);
 
 	device_state = DEV_STATE_BREW;
+	tea_state = TEA_STATE_HEAT;
 	ssr_on();
-	servo_set_angle(180);
 }
 
 int main(void) {
@@ -103,11 +137,6 @@ int main(void) {
 		char key;
 		if ((key = keypad_getc()))
 			handle_key(key);
-
-		uint8_t temp = thermistor_read_temp();
-		if (temp >= 190) {
-			tea_off();
-		}
 	}
 }
 

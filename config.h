@@ -76,8 +76,9 @@
 /**
  * Tea configuration
  */
-#define TEA_TEMP_MIN 190
+#define TEA_TEMP_MIN 100
 #define TEA_TEMP_MAX 190
+#define TEA_STEEP_TIME 15
 
 
 #endif
