@@ -112,6 +112,8 @@ int main(void) {
 static void handle_key(const char key) {
 	keypad_int_disable();
 	if (tea_state == TEA_STATUS_ON) {
+		if (key == '*')
+			tea_off();
 		//tea should handle all these keys
 	} else if (tea_state == TEA_STATUS_OFF) {
 		handle_key_idle(key);
@@ -125,6 +127,8 @@ static void handle_key_idle(const char key) {
 	//digit
 	if (key >= 0x30 && key <= 0x39) {
 		handle_temperature_digit(key - 0x30);
+	} else if (key == '#') {
+		tea_on();
 	}
 }
 
