@@ -10,10 +10,10 @@
 static uint8_t tea_set_point = 0;
 
 static enum {
-	TEA_STATUS_UNKNOWN,
-	TEA_STATUS_ON,
-	TEA_STATUS_OFF
-} tea_state;
+	DEV_STATE_UNKNOWN,
+	DEV_STATE_BREW,
+	DEV_STATE_IDLE
+} device_state;
 
 typedef struct {
 	enum {
@@ -49,12 +49,12 @@ static void tea_display_temp(void) {
 
 static inline void tea_off(void) {
 	//do fun stuff while no tea is brewing
-	if (tea_state == TEA_STATUS_OFF)
+	if (device_state == DEV_STATE_IDLE)
 		return;
 
 	del_timer(tea_display_temp);
 	//add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
-	tea_state = TEA_STATUS_OFF;
+	device_state = DEV_STATE_IDLE;
 	ssr_off();
 	servo_set_angle(0);
 	if (tea_set_point != 0)
@@ -74,14 +74,14 @@ static void tea_set_temperature(uint16_t temp) {
 }
 
 static inline void tea_on(void) {
-	if (tea_state == TEA_STATUS_ON)
+	if (device_state == DEV_STATE_BREW)
 		return;
 
 	//update the temperature display once per second
 	add_timer(tea_display_temp, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
 	//del_timer(display_test);
 
-	tea_state = TEA_STATUS_ON;
+	device_state = DEV_STATE_BREW;
 	ssr_on();
 	servo_set_angle(180);
 }
@@ -116,11 +116,11 @@ int main(void) {
  */
 static void handle_key(const char key) {
 	keypad_int_disable();
-	if (tea_state == TEA_STATUS_ON) {
+	if (device_state == DEV_STATE_BREW) {
 		if (key == '*')
 			tea_off();
 		//tea should handle all these keys
-	} else if (tea_state == TEA_STATUS_OFF) {
+	} else if (device_state == DEV_STATE_IDLE) {
 		handle_key_idle(key);
 	} else {
 		//What? there is no else!
