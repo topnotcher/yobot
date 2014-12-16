@@ -70,7 +70,7 @@
 #define KEYPAD_SCAN_SAMPLES 3
 
 //after keypress is recorded, ignore keypresses for this many milliseconds
-#define KEYPAD_REPEAT_RATE 100
+#define KEYPAD_REPEAT_RATE 250
 
 
 #endif
