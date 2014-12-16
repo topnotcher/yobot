@@ -170,11 +170,12 @@ static void __del_timer(void (*task_cb)(void)) {
 	timer_node *node = task_list;
 
 	while (node != NULL) {
+		timer_node *next = node->next;
 		if (node->task.task == task_cb) {
 			__del_timer_node(node);
 			break;
 		}
-		node = node->next;
+		node = next;;
 	}
 }
 
