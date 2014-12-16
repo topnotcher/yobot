@@ -40,7 +40,7 @@ static void tea_set_temperature(uint16_t temp);
 
 static void clear_temp_state(void) {
 	temp_entry.state = TEMP_STATE_NONE;
-	display_puts("   ");
+	display_puts("---");
 }
 
 static void tea_display_temp(void) {
@@ -65,10 +65,12 @@ static inline void tea_off(void) {
 }
 
 static void tea_set_temperature(uint16_t temp) {
-	if (temp < TEA_TEMP_MIN || temp > TEA_TEMP_MAX)
+	if (temp < TEA_TEMP_MIN || temp > TEA_TEMP_MAX) {
 		display_puts("Err");
-	else
+	} else {
+		tea_set_point = temp;
 		display_puti(temp);
+	}
 }
 
 static inline void tea_on(void) {
@@ -109,6 +111,9 @@ int main(void) {
 	}
 }
 
+/**
+ * Handle all key presses
+ */
 static void handle_key(const char key) {
 	keypad_int_disable();
 	if (tea_state == TEA_STATUS_ON) {
@@ -123,15 +128,28 @@ static void handle_key(const char key) {
 	keypad_int_enable();
 }
 
+/**
+ * Handle keys when tea is not being brewed
+ */
 static void handle_key_idle(const char key) {
 	//digit
 	if (key >= 0x30 && key <= 0x39) {
 		handle_temperature_digit(key - 0x30);
 	} else if (key == '#') {
-		tea_on();
+		if (tea_set_point == 0)
+			display_puts("Err");
+		else
+			tea_on();
+	} else if (key == '*') {
+		display_puts("---");
+		del_timer(clear_temp_state);
+		clear_temp_state();
 	}
 }
 
+/**
+ * Handle keys to set temperature digits
+ */
 static void handle_temperature_digit(const uint8_t digit) {
 	char buf[4] = "---";
 
