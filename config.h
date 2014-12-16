@@ -73,4 +73,11 @@
 #define KEYPAD_REPEAT_RATE 250
 
 
+/**
+ * Tea configuration
+ */
+#define TEA_TEMP_MIN 190
+#define TEA_TEMP_MAX 190
+
+
 #endif

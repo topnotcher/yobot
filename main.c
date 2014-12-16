@@ -65,7 +65,7 @@ static inline void tea_off(void) {
 }
 
 static void tea_set_temperature(uint16_t temp) {
-	if (temp != 190)
+	if (temp < TEA_TEMP_MIN || temp > TEA_TEMP_MAX)
 		display_puts("Err");
 	else
 		display_puti(temp);
