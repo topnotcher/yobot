@@ -46,5 +46,7 @@
 
 void keypad_init(void);
 char keypad_getc(void);
+void keypad_int_enable(void);
+void keypad_int_disable(void);
 
 #endif

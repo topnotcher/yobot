@@ -110,6 +110,7 @@ int main(void) {
 }
 
 static void handle_key(const char key) {
+	keypad_int_disable();
 	if (tea_state == TEA_STATUS_ON) {
 		//tea should handle all these keys
 	} else if (tea_state == TEA_STATUS_OFF) {
@@ -117,6 +118,7 @@ static void handle_key(const char key) {
 	} else {
 		//What? there is no else!
 	}
+	keypad_int_enable();
 }
 
 static void handle_key_idle(const char key) {

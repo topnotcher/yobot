@@ -41,11 +41,11 @@ typedef struct {
 
 static keypad_scan_t keypad_scanner;
 
-static void keypad_int_enable(void) {
+void keypad_int_enable(void) {
 	KEYPAD_PORT.INTCTRL |= PORT_INT0LVL_MED_gc;
 }
 
-static void keypad_int_disable(void) {
+void keypad_int_disable(void) {
 	KEYPAD_PORT.INTCTRL &= ~PORT_INT0LVL_MED_gc;
 }
 
@@ -66,9 +66,9 @@ static void keypad_init_colscan(void) {
 	KEYPAD_PORT.DIRCLR = KEYPAD_COLMASK;
 
 	//set pullup on cols (well this blows!)
-	KEYPAD_PINCTRL(C1) = PORT_OPC_PULLUP_gc;
-	KEYPAD_PINCTRL(C2) = PORT_OPC_PULLUP_gc;
-	KEYPAD_PINCTRL(C3) = PORT_OPC_PULLUP_gc;
+	KEYPAD_PINCTRL(C1) = PORT_OPC_PULLUP_gc;// | PORT_ISC_FALLING_gc;
+	KEYPAD_PINCTRL(C2) = PORT_OPC_PULLUP_gc;// | PORT_ISC_FALLING_gc;
+	KEYPAD_PINCTRL(C3) = PORT_OPC_PULLUP_gc;// | PORT_ISC_FALLING_gc;
 }
 
 /**
@@ -133,6 +133,7 @@ static void keypad_scan(void) {
 			//col was not read - abort
 			if (keypad_scanner.colmask == 0) {
 				keypad_scan_end();
+
 			//col was read - try rows
 			} else {
 				keypad_scanner.samples = 0;
@@ -150,6 +151,7 @@ static void keypad_scan(void) {
 			} else {
 				keymask = keypad_scanner.colmask | keypad_scanner.rowmask;
 
+				del_timer(keypad_scan);
 				//keypad_int_enable();
 				//implement key repeat rate.
 				add_timer(keypad_scan_end, KEYPAD_REPEAT_RATE, 1);
