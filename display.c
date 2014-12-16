@@ -127,13 +127,13 @@ void display_puti(uint8_t n) {
 	//least significant digit first
 	for (int8_t i = DISPLAY_SIZE-1; i >= 0; --i) {
 		uint8_t digit = n%10;
+		n /= 10;
 
 		//don't print leading zeroes
-		if (digit == 0 && i < 2)
+		if (digit == 0 && i < 2 && n == 0)
 			break;
 
 		str[i] = digit + 0x30;
-		n /= 10;
 	}
 	display_puts(str);
 }
