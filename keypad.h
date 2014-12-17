@@ -44,30 +44,9 @@
 #define KEY_POUND 	 KEY_PINS(4,3)
 
 
-/**
- *
- * Don't ask me why, but shit doesn't work if we switch I/O and try to read
- * again too quickly without delaying. This can likely be tweaked (2 NOPS
- * should be sufficient @2MHz).
- */
-#define KEYPAD_SCAN_DELAY()	\
-	__asm__ __volatile__ ("nop");\
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop"); \
-	__asm__ __volatile__ ("nop")
-
-
-
 void keypad_init(void);
-
+char keypad_getc(void);
 void keypad_int_enable(void);
 void keypad_int_disable(void);
-char keypad_getc(void);
 
 #endif

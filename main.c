@@ -1,81 +1,243 @@
 #include <avr/io.h>
+#include <util/delay.h>
 #include "keypad.h"
 #include "display.h"
 #include "temp.h"
 #include "servo.h"
 #include "ssr.h"
 #include "timer.h"
+#include "mp3.h"
 
+
+static uint8_t tea_set_point = 0;
+
+/**
+ * Whether or not the device is brewing tea
+ */
 static enum {
-	TEA_STATUS_UNKNOWN,
-	TEA_STATUS_ON,
-	TEA_STATUS_OFF
-} tea_status;
+	DEV_STATE_UNKNOWN,
+	DEV_STATE_BREW,
+	DEV_STATE_IDLE
+} device_state;
 
-static void tea_display_temp(void) {
-	display_puti(thermistor_read_temp());
+
+/**
+ * Progress in the tea brewing cycle
+ */
+static enum {
+	TEA_STATE_HEAT,
+	TEA_STATE_STEEP
+} tea_state;
+static uint8_t tea_ticks;
+
+typedef struct {
+	enum {
+		//not entering a temperature
+		TEMP_STATE_NONE,
+		//entering a temperature
+		TEMP_STATE_ENTER,
+	} state;
+
+	uint8_t digits[3];
+
+	//digit being entered: 0,1,2
+	uint8_t digit;
+
+} temp_entry_t;
+
+static temp_entry_t temp_entry;
+
+
+static void handle_key(const char key);
+static void handle_key_idle(const char key);
+static void handle_temperature_digit(const uint8_t digit);
+static void tea_set_temperature(uint16_t temp);
+static void tea_tick(void);
+static void tea_off(void);
+static void tea_on(void);
+
+static void clear_temp_state(void) {
+	temp_entry.state = TEMP_STATE_NONE;
+	display_puts("---");
 }
 
-static inline void tea_off(void) {
-	//do fun stuff while no tea is brewing
-	if (tea_status == TEA_STATUS_OFF)
-		return;
+static void tea_tick(void) {
+	if (tea_state == TEA_STATE_HEAT) {
+		uint8_t temp = thermistor_read_temp();
+		display_puti(temp);
 
-	del_timer(tea_display_temp);
-	add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
-	tea_status = TEA_STATUS_OFF;
+		if (temp >= tea_set_point) {
+			ssr_off();
+			servo_set_angle(180);
+			tea_state = TEA_STATE_STEEP;
+			tea_ticks = TEA_STEEP_TIME;
+		}
+
+	} else if (tea_state == TEA_STATE_STEEP) {
+		//tea done
+		display_puti(tea_ticks);
+		if (tea_ticks == 0) {
+			tea_off();
+			//mp3_play(6);
+		} else {
+			--tea_ticks;
+		}
+	}
+}
+
+static void tea_off(void) {
+	//do fun stuff while no tea is brewing
+	//if (device_state == DEV_STATE_IDLE)
+		//return;
+
+	del_timer(tea_tick);
+	//add_timer(display_test, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
+	device_state = DEV_STATE_IDLE;
 	ssr_off();
 	servo_set_angle(0);
+	if (tea_set_point != 0)
+		display_puti(tea_set_point);
+	else
+		display_puts("---");
+
 }
 
-static inline void tea_on(void) {
-	if (tea_status == TEA_STATUS_ON)
+static void tea_set_temperature(uint16_t temp) {
+	//001_180-190.mp3  002_190-200.mp3  003_200-212.mp3  004_212+.mp3  005_buttons.mp3  006_done.mp3  007_stop.mp3  008_success.mp3  009_under180.mp3      010_welcome.mp3
+	//
+	if (temp < TEA_TEMP_MIN || temp > TEA_TEMP_MAX) {
+		display_puts("Err");
+	
+		if (temp < 180) {
+			//9 is playing success, 10 is playing welcome????
+			//5 is supposed to be buttons
+			mp3_play(5);
+		} else if (temp < 190) {
+			mp3_play(1);
+		} else if (temp < 200) {
+			mp3_play(2);
+		} else if (temp < 212) {
+			mp3_play(3);
+		} else if (temp >= 212) {
+			mp3_play(4);
+		}
+		
+	} else {
+		tea_set_point = temp;
+		display_puti(temp);
+		//should be 8, but actually 9
+		// 8 is stop...
+		// buttons is...
+		mp3_play(9);
+	}
+}
+
+static void tea_on(void) {
+	if (device_state == DEV_STATE_BREW)
 		return;
 
+	mp3_play(3);
 	//update the temperature display once per second
-	add_timer(tea_display_temp, TIMER_HZ/4, TIMER_RUN_UNLIMITED);
-	del_timer(display_test);
+	add_timer(tea_tick, TIMER_HZ, TIMER_RUN_UNLIMITED);
+	//del_timer(display_test);
 
-	tea_status = TEA_STATUS_ON;
+	device_state = DEV_STATE_BREW;
+	tea_state = TEA_STATE_HEAT;
 	ssr_on();
-	servo_set_angle(180);
 }
 
-#include <util/delay.h>
 int main(void) {
+	//allow everything to settle/boot/etc
+	_delay_ms(500);
+
 	servo_init();
 	keypad_init();
 	display_init();
 	thermistor_init();
 	ssr_init();
 	init_timers();
+	mp3_init();
 
 	tea_off();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	sei();
 
+	//another 100 for things to settle
+	_delay_ms(100);
+
+	mp3_play(10);
+
 	while (1) {
 		char key;
-		if ((key = keypad_getc())) {
-			// GREG: Why are interrupts being disabled here?
-			// test without disabling (should work) !!!!!
-			keypad_int_disable();
-			//display_putchar(key);
+		if ((key = keypad_getc()))
+			handle_key(key);
+	}
+}
 
-			if (key == '*') {
-				tea_off();
-			} else if (key == '0') {
-				servo_set_angle(90);
-			} else if (key == '#') {
-				tea_on();
-			}
-			keypad_int_enable();
-		}
-
-		uint8_t temp = thermistor_read_temp();
-		if (temp >= 190) {
+/**
+ * Handle all key presses
+ */
+static void handle_key(const char key) {
+	keypad_int_disable();
+	if (device_state == DEV_STATE_BREW) {
+		if (key == '*')
 			tea_off();
-		}
+		//7 is 'absolutely awful cuppa'
+		mp3_play(5);
+	} else if (device_state == DEV_STATE_IDLE) {
+		handle_key_idle(key);
+	} else {
+		//What? there is no else!
+	}
+	keypad_int_enable();
+}
+
+/**
+ * Handle keys when tea is not being brewed
+ */
+static void handle_key_idle(const char key) {
+	//digit
+	if (key >= 0x30 && key <= 0x39) {
+		handle_temperature_digit(key - 0x30);
+	} else if (key == '#') {
+		if (tea_set_point == 0)
+			display_puts("Err");
+		else
+			tea_on();
+	} else if (key == '*') {
+		display_puts("---");
+		del_timer(clear_temp_state);
+		clear_temp_state();
+	}
+}
+
+/**
+ * Handle keys to set temperature digits
+ */
+static void handle_temperature_digit(const uint8_t digit) {
+	char buf[4] = "---";
+
+	//this is the first digit
+	if (temp_entry.state == TEMP_STATE_NONE) {
+		temp_entry.state = TEMP_STATE_ENTER;
+		temp_entry.digit = 0;
+	}
+
+	temp_entry.digits[temp_entry.digit] = digit;
+	del_timer(clear_temp_state);
+
+	for (uint8_t i = 0; i <= temp_entry.digit; ++i)
+		buf[i] = temp_entry.digits[i]+0x30;
+
+	display_puts(buf);
+
+	if (temp_entry.digit == 2) {
+		temp_entry.state = TEMP_STATE_NONE;
+		uint16_t temp = temp_entry.digits[0]*100 + temp_entry.digits[1]*10 + temp_entry.digits[2];
+		tea_set_temperature(temp);
+	} else {
+		temp_entry.digit++;
+		add_timer(clear_temp_state, 5*TIMER_HZ, 1);
 	}
 }

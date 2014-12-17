@@ -23,7 +23,7 @@
 /***************************************
  * Solid state relay configuration
  **************************************/
-#define CONFIG_SSR_PORT PORTB
+#define CONFIG_SSR_PORT PORTC
 #define CONFIG_SSR_PIN 2
 
 /***************************************
@@ -58,6 +58,27 @@
 #define KEYPAD_PIN_C1 4
 #define KEYPAD_PIN_C2 5
 #define KEYPAD_PIN_C3 2
+
+
+/**
+ * In order to kill contact bounce, when a keypress is detected, the keys are
+ * scanned KEYPAD_SCAN_SAMPLES every KEYPAD_SCAN_DELAY milliseconds. This
+ * happens twice: once for the rows, once for the cols. Thus delay=5, samples
+ * = 3 => 30ms spent reading a key.
+ */
+#define KEYPAD_SCAN_DELAY 5
+#define KEYPAD_SCAN_SAMPLES 3
+
+//after keypress is recorded, ignore keypresses for this many milliseconds
+#define KEYPAD_REPEAT_RATE 250
+
+
+/**
+ * Tea configuration
+ */
+#define TEA_TEMP_MIN 100
+#define TEA_TEMP_MAX 190
+#define TEA_STEEP_TIME 5
 
 
 #endif
