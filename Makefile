@@ -3,7 +3,7 @@ MCU = atxmega32a4u
 F_CPU = 2000000
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c servo.c keypad.c display.c adc.c temp.c ssr.c timer.c mempool.c malloc.c mp3.c
+SRC = main.c servo.c keypad.c display.c adc.c temp.c ssr.c timer.c mempool.c malloc.c mp3.c queue.c
 
 #these are not ready for this hardware
 # ir_sensor.c lcd.c game.c
