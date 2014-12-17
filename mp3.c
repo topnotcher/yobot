@@ -143,6 +143,6 @@ ISR(USARTD0_DRE_vect) {
 
 		//NOT setting status busy here because the mp3 chip can't handle
 		//commands as fast as we can send them (WHY WHY WHY???)
-		add_timer(uart_begin_tx, 100, 1);
+		add_timer(uart_begin_tx, 200, 1);
 	}
 }
