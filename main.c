@@ -135,7 +135,8 @@ static void tea_on(void) {
 
 int main(void) {
 	//allow everything to settle/boot/etc
-	_delay_ms(500);
+	//(mainly the mp3 chip takes a while to boot up)
+	_delay_ms(2000);
 
 	servo_init();
 	keypad_init();
