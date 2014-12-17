@@ -28,7 +28,7 @@ static enum {
 	TEA_STATE_HEAT,
 	TEA_STATE_STEEP
 } tea_state;
-static uint8_t tea_ticks;
+static uint16_t tea_ticks;
 
 typedef struct {
 	enum {
