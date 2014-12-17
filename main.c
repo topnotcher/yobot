@@ -109,9 +109,7 @@ static void tea_set_temperature(uint16_t temp) {
 		display_puts("Err");
 	
 		if (temp < 180) {
-			//9 is playing success, 10 is playing welcome????
-			//5 is supposed to be buttons
-			mp3_play(5);
+			mp3_play(9);
 		} else if (temp < 190) {
 			mp3_play(1);
 		} else if (temp < 200) {
@@ -125,10 +123,7 @@ static void tea_set_temperature(uint16_t temp) {
 	} else {
 		tea_set_point = temp;
 		display_puti(temp);
-		//should be 8, but actually 9
-		// 8 is stop...
-		// buttons is...
-		mp3_play(9);
+		mp3_play(8);
 	}
 }
 
@@ -136,7 +131,6 @@ static void tea_on(void) {
 	if (device_state == DEV_STATE_BREW)
 		return;
 
-	mp3_play(3);
 	//update the temperature display once per second
 	add_timer(tea_tick, TIMER_HZ, TIMER_RUN_UNLIMITED);
 	//del_timer(display_test);
@@ -166,6 +160,7 @@ int main(void) {
 	//another 100 for things to settle
 	_delay_ms(100);
 
+	//welcome
 	mp3_play(10);
 
 	while (1) {
@@ -183,7 +178,6 @@ static void handle_key(const char key) {
 	if (device_state == DEV_STATE_BREW) {
 		if (key == '*')
 			tea_off();
-		//7 is 'absolutely awful cuppa'
 		mp3_play(5);
 	} else if (device_state == DEV_STATE_IDLE) {
 		handle_key_idle(key);
