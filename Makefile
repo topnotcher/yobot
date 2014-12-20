@@ -1,9 +1,9 @@
 # MCU name
-MCU = atxmega32a4u
+MCU = atxmega64a4u
 F_CPU = 2000000
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c servo.c keypad.c display.c adc.c temp.c ssr.c timer.c mempool.c malloc.c mp3.c queue.c
+SRC = main.c ssr.c timer.c mempool.c malloc.c debug.c queue.c
 
 #these are not ready for this hardware
 # ir_sensor.c lcd.c game.c
@@ -45,7 +45,7 @@ CFLAGS = -g -O$(OPT) \
 $(patsubst %,-I%,$(EXTRAINCDIRS))
 
 #-finline-functions -finline-functions-called-once -finline-limit=1000 -finline-small-functions\
-# Set a "language standard" compiler flag.
+# Set a "language standard" compiler flag. 
 #   Unremark just one line below to set the language standard to use.
 #   gnu99 = C99 + GNU extensions. See GCC manual for more information.
 #CFLAGS += -std=c89
