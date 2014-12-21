@@ -29,12 +29,6 @@ static mempool_t *task_pool;
 static timer_node *task_list;
 static timer_ticks_t ticks;
 
-//*HACKS*
-static bool in_timer_interrupt;
-static timer_node *add_queue;
-static void (*del_queue[3])(void);
-static uint8_t del_number;
-
 static inline void set_ticks(void) ATTR_ALWAYS_INLINE;
 static void __del_timer_node(timer_node *rm_node);
 static void __del_timer(void (*task_cb)(void));
@@ -83,7 +77,8 @@ static timer_node *init_timer(void (*task_cb)(void), timer_ticks_t task_freq,
 }
 
 /**
- * Create and register a timer.
+ * Create and register a timer. Result is _undefined_ if called while executing
+ * a timer.
  *
  * @param task_cb callback function to run when timer triggers.
  * @param task_freq frequency to trigger the timer.
@@ -91,19 +86,6 @@ static timer_node *init_timer(void (*task_cb)(void), timer_ticks_t task_freq,
  */
 void add_timer(void (*task_cb)(void), timer_ticks_t task_freq, timer_lifetime_t task_lifetime) {
 	timer_node * node = init_timer(task_cb, task_freq, task_lifetime);
-
-	/**HACKS*/
-	if (in_timer_interrupt) {
-		if (add_queue == NULL)
-			add_queue = node;
-		else {
-			timer_node *cur = add_queue;
-			while (cur->next != NULL);
-			cur->next = node;
-		}
-
-		return;
-	}
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		__add_timer_node(node, 1);
@@ -197,16 +179,11 @@ static void __del_timer(void (*task_cb)(void)) {
 }
 
 /**
- * Delete a timer.
+ * Delete a timer. Result is undefined if called while executing a timer.
  *
  * @param task_cb the callback function registered in the timer.
  */
 void del_timer(void (*task_cb)(void)) {
-	if (in_timer_interrupt) {
-		del_queue[del_number++] = task_cb;
-		return;
-	}
-
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		__del_timer(task_cb);
 		set_ticks();
@@ -235,16 +212,14 @@ static void __del_timer_node(timer_node *rm_node) {
 
 /**
  * Note that the list is rebuilt. This is to handle reordering of the list
- * items when node->task.ticks is reset to .freq.
+ * items when node->task.ticks is reset to .freq. Due to this, a task cannot
+ * modify timers while it is running; this must be deferred until outside of
+ * timer interrupt context.
  */
 TIMER_RUN {
 	timer_node *node;
 	timer_node *cur = task_list;
 	task_list = NULL;
-	/**HACKS*/
-	in_timer_interrupt = 1;
-	add_queue = NULL;
-	del_number = 0;
 
 	while (cur != NULL) {
 		node = cur;
@@ -273,25 +248,5 @@ TIMER_RUN {
 		}
 	}
 
-
-	if (del_number != 0) {
-		for (uint8_t i = 0; i < del_number; ++i) {
-			__del_timer(del_queue[i]);
-		}
-	}
-
-	cur = add_queue;
-	while (cur != NULL) {
-		node = cur;
-		cur = node->next;
-		node->next = NULL;
-		node->prev = NULL;
-
-		__add_timer_node(node,0);
-		
-
-	}
-
 	set_ticks();
-	in_timer_interrupt = 0;
 }
