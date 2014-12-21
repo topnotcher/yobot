@@ -38,8 +38,8 @@ static uart_t uart;
 
 void debug_init(void) {
 
-	uint16_t bsel = 1666;
-	int8_t bscale = -7;
+	uint16_t bsel = 3332;
+	int8_t bscale = -4;
 
 	//BSEL
 	USARTC1.BAUDCTRLA = (uint8_t)( bsel & 0x00FF );

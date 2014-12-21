@@ -1,9 +1,9 @@
 # MCU name
 MCU = atxmega64a4u
-F_CPU = 2000000
+F_CPU = 32000000
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c ssr.c timer.c mempool.c malloc.c debug.c queue.c
+SRC = main.c ssr.c timer.c mempool.c malloc.c debug.c queue.c threads.c temp.c ds2483.c twi_master.c tasks.c
 
 #these are not ready for this hardware
 # ir_sensor.c lcd.c game.c
