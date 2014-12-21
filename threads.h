@@ -53,6 +53,7 @@ extern threads_t threads;
 	} while(0)
 
 uint8_t thread_create(const char * name, void (*task)(void));
+void block(void) __attribute__((naked));
 
 #define thread_context_in()                                \
 	asm volatile(\

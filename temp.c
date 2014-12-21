@@ -19,7 +19,6 @@ static ds2483_dev_t *onewiredev;
 static int16_t temp;
 
 static void onewire_schedule(void);
-static void onewire_block(void) __attribute__((naked));
 static void onewire_resume(void) __attribute__((naked));
 static inline void onewire_sleep(uint16_t);
 static void onewire_init(void);
@@ -50,18 +49,22 @@ void temp_run(void) {
 				temp = tmp_temp;
 			}
 		}
+	
+		char buf[5] = {0};
+		sprintf(buf, "%d", temp);
+		debug_write(buf);
 	}
 }
 
 static void onewire_init(void) {
 	twi_master_t *twim = twi_master_init(&ONEWIRE_TWI.MASTER, ONEWIRE_TWI_BAUD, NULL, NULL);
-	twi_master_set_blocking(twim, onewire_block, onewire_schedule);
+	twi_master_set_blocking(twim, block, onewire_schedule);
 	onewiredev = ds2483_init(twim,&ONEWIRE_SLPZ_PORT,_PIN(ONEWIRE_SLPZ_PIN));
 }
 
 static inline void onewire_sleep(uint16_t ms) {
 	add_timer(onewire_schedule, ms, 1);
-	onewire_block();
+	block();
 }
 
 static void onewire_schedule(void) {
@@ -70,10 +73,6 @@ static void onewire_schedule(void) {
 
 static void onewire_resume(void) {
 	threads_switchto(1);
-}
-
-static void onewire_block(void) {
-	threads_switchto(0);
 }
 
 //@TODO!!!
