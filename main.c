@@ -5,6 +5,7 @@
 #include "threads.h"
 #include "temp.h"
 #include "tasks.h"
+#include "yogurt.h"
 
 #define CLKSYS_Enable( _oscSel ) ( OSC.CTRL |= (_oscSel) )
 #define CLKSYS_IsReady( _oscSel ) ( OSC.STATUS & (_oscSel) )
@@ -14,12 +15,11 @@ static void main_thread(void);
 int main(void) {
 	sysclk_set_internal_32mhz();
 
-	ssr_init();
 	tasks_init();
 	init_timers();
 	debug_init();
 	temp_init();
-
+	yogurt_init();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
 	//interrupts will get enabled when process starts

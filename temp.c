@@ -10,12 +10,15 @@
 #include "ds2483.h"
 #include "ds18b20.h"
 #include "debug.h"
+#include "error.h"
 #include "config.h"
 
 #define _CONCAT3(a,b,c) a##b##c
 #define _PIN(id) _CONCAT3(PIN,id,_bm)
 
 static ds2483_dev_t *onewiredev;
+
+static int8_t temp_error;
 static int16_t temp;
 
 static void onewire_schedule(void);
@@ -24,8 +27,9 @@ static inline void onewire_sleep(uint16_t);
 static void onewire_init(void);
 
 void temp_init(void) {
+	temp_error = -EINVAL;
 	onewire_init();
-	add_timer(onewire_schedule, TEMP_SECONDS*1000, 1);
+	add_timer(onewire_schedule, TEMP_SECONDS*TIMER_HZ, 1);
 }
 
 /**
@@ -35,8 +39,16 @@ void temp_run(void) {
 	ds2483_rst(onewiredev);
 
 	while(1) {
-		ds18b20_start_conversion(onewiredev);
+		int8_t error;
+		error = ds18b20_start_conversion(onewiredev);
 
+		if (error) {
+			temp_error = error;
+			debug_write("ERROR");
+			continue;
+		}
+
+	
 		//@TODO: failsafe if ds18b20_* returns error
 
 		//note: manual indicates max 750ms per conversion 
@@ -44,16 +56,29 @@ void temp_run(void) {
 
 		//16 bit operations are not atomic
 		int16_t tmp_temp;
-		if (!ds18b20_read_temp(onewiredev,&tmp_temp)) {
+		error = ds18b20_read_temp(onewiredev,&tmp_temp);
+		if (!error) {
 			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 				temp = tmp_temp;
 			}
+
+	
+			temp_error = 0;
+
+			char buf[5] = {0};
+			sprintf(buf, "%d", temp);
+			debug_write(buf);
+		} else {
+			debug_write("ERROR");
+			temp_error = error;
 		}
 	
-		char buf[5] = {0};
-		sprintf(buf, "%d", temp);
-		debug_write(buf);
 	}
+}
+
+int8_t get_temp(int16_t *temp_ret) {
+	*temp_ret = temp;
+	return temp_error;
 }
 
 static void onewire_init(void) {
