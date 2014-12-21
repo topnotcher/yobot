@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <util/atomic.h>
+
 #include "temp.h"
 #include "timer.h"
 #include "tasks.h"
@@ -18,13 +20,14 @@
 #define TEMP_CMD_CONVERT_T 0x44
 
 static ds2483_dev_t *onewiredev;
+static int16_t temp;
 
 static void onewire_schedule(void);
 static void onewire_block(void) __attribute__((naked));
 static void onewire_resume(void) __attribute__((naked));
 static inline void onewire_sleep(uint16_t);
 static void onewire_init(void);
-static void temp_read(void);
+static void temp_read(int16_t*);
 static void temp_start_conversion(void);
 
 void temp_init(void) {
@@ -37,33 +40,34 @@ void temp_run(void) {
 
 	while(1) {
 		temp_start_conversion();
-		onewire_sleep(TEMP_SECONDS*1000);
-		temp_read();
 
+		//note: manual indicates max 750ms per conversion 
+		onewire_sleep(TEMP_SECONDS*TIMER_HZ);
+
+		temp_read(&temp);
 	}
 }
 
-static void temp_read() {
-	uint8_t result = ds2483_1w_rst(onewiredev);
-
-	if (!result)
+static void temp_read(int16_t *temp) {
+	if (!ds2483_1w_rst(onewiredev))
 		return; //no device
 
 	ds2483_1w_write(onewiredev, TEMP_CMD_SKIP_ROM);
 	ds2483_1w_write(onewiredev, TEMP_CMD_READ_SCRATCHPAD);
+
 	uint8_t low = ds2483_1w_read_byte(onewiredev);
 	uint8_t high = ds2483_1w_read_byte(onewiredev);
-	int16_t temp = (low>>4) | (high<<4);
-	char buf[5] = {0};
-	sprintf(buf, "%d", temp);
 
-	debug_write(buf);
+	//note: the low bits in the low byte are fractional
+	//16 bit operations are not atomic
+	int16_t tmp = (low>>4) | (high<<4);
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		*temp = tmp;
+	}
 }
 
 static void temp_start_conversion() {
-	uint8_t result = ds2483_1w_rst(onewiredev);
-
-	if (!result)
+	if (!ds2483_1w_rst(onewiredev))
 		return; //no device
 
 	ds2483_1w_write(onewiredev, TEMP_CMD_SKIP_ROM);
