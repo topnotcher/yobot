@@ -8,16 +8,12 @@
 #include "tasks.h"
 #include "threads.h"
 #include "ds2483.h"
+#include "ds18b20.h"
 #include "debug.h"
 #include "config.h"
 
 #define _CONCAT3(a,b,c) a##b##c
 #define _PIN(id) _CONCAT3(PIN,id,_bm)
-
-//applicable when there is only ONE one wire device on the bus!
-#define TEMP_CMD_SKIP_ROM 0xCC
-#define TEMP_CMD_READ_SCRATCHPAD 0xBE
-#define TEMP_CMD_CONVERT_T 0x44
 
 static ds2483_dev_t *onewiredev;
 static int16_t temp;
@@ -27,51 +23,34 @@ static void onewire_block(void) __attribute__((naked));
 static void onewire_resume(void) __attribute__((naked));
 static inline void onewire_sleep(uint16_t);
 static void onewire_init(void);
-static void temp_read(int16_t*);
-static void temp_start_conversion(void);
 
 void temp_init(void) {
 	onewire_init();
 	add_timer(onewire_schedule, TEMP_SECONDS*1000, 1);
 }
 
+/**
+ * Temperature monitoring thread.
+ */
 void temp_run(void) {
 	ds2483_rst(onewiredev);
 
 	while(1) {
-		temp_start_conversion();
+		ds18b20_start_conversion(onewiredev);
+
+		//@TODO: failsafe if ds18b20_* returns error
 
 		//note: manual indicates max 750ms per conversion 
 		onewire_sleep(TEMP_SECONDS*TIMER_HZ);
 
-		temp_read(&temp);
+		//16 bit operations are not atomic
+		int16_t tmp_temp;
+		if (!ds18b20_read_temp(onewiredev,&tmp_temp)) {
+			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+				temp = tmp_temp;
+			}
+		}
 	}
-}
-
-static void temp_read(int16_t *temp) {
-	if (!ds2483_1w_rst(onewiredev))
-		return; //no device
-
-	ds2483_1w_write(onewiredev, TEMP_CMD_SKIP_ROM);
-	ds2483_1w_write(onewiredev, TEMP_CMD_READ_SCRATCHPAD);
-
-	uint8_t low = ds2483_1w_read_byte(onewiredev);
-	uint8_t high = ds2483_1w_read_byte(onewiredev);
-
-	//note: the low bits in the low byte are fractional
-	//16 bit operations are not atomic
-	int16_t tmp = (low>>4) | (high<<4);
-	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-		*temp = tmp;
-	}
-}
-
-static void temp_start_conversion() {
-	if (!ds2483_1w_rst(onewiredev))
-		return; //no device
-
-	ds2483_1w_write(onewiredev, TEMP_CMD_SKIP_ROM);
-	ds2483_1w_write(onewiredev, TEMP_CMD_CONVERT_T);
 }
 
 static void onewire_init(void) {
