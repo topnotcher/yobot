@@ -1,7 +1,6 @@
 #include <avr/io.h>
 #include "ssr.h"
 #include "timer.h"
-#include "debug.h"
 #include "threads.h"
 #include "temp.h"
 #include "tasks.h"
@@ -17,8 +16,6 @@ int main(void) {
 
 	tasks_init();
 	init_timers();
-	debug_init();
-	temp_init();
 	yogurt_init();
 
 	PMIC.CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm | PMIC_HILVLEN_bm;
@@ -34,7 +31,6 @@ int main(void) {
 
 static void main_thread(void) {
 	static int i = 0;
-	debug_write("hello");
 	while (1) {
 		tasks_run();
 		++i;

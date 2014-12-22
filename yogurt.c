@@ -4,8 +4,15 @@
 #include "tasks.h"
 #include "timer.h"
 #include "yogurt.h"
-#include "debug.h"
+#include "display.h"
+//#include "debug.h"
+#include <stdio.h>
 
+/*
+void display_puts(char *s) {
+	debug_write(s);
+}
+*/
 
 //stage 1 heats to 185F for 10 minutes to sterilize
 //stage 2 cools the milk to 110F and holds for 10 minutes
@@ -48,10 +55,14 @@ static yogurt_state_t state;
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
 static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp);
 static void yogurt_start(void);
-static void yogurt_run(void);
+static void yogurt_run_upper(void);
+static void yogurt_run_lower(void);
 
 void yogurt_init() {
+	display_init();
+	temp_init();
 	ssr_init();
+	//debug_init();
 	task_schedule(yogurt_start);
 }
 
@@ -63,14 +74,31 @@ static void yogurt_start() {
 	} else {
 		state.cycle = &yogurt_cycles[0];
 		state.step = YOGURT_STEP_ATTAIN;
-		add_timer(yogurt_run, TIMER_HZ, TIMER_RUN_UNLIMITED);
+		add_timer(yogurt_run_upper, 1*TIMER_HZ, TIMER_RUN_UNLIMITED);
 	}
 }
 
-void yogurt_run() {
+/**
+ * This runs via timer
+ */
+static void yogurt_run_upper() {
+	if (state.step == YOGURT_STEP_MAINTAIN) {
+		if (++state.seconds == 60) {
+			state.minutes++;
+			state.seconds = 0;
+		}
+	}
+	task_schedule(yogurt_run_lower);
+}
 
+/**
+ * This runs after yogurt_run_upper() -- outside of timer context
+ */
+static void yogurt_run_lower() {
 	if (state.step == YOGURT_STEP_IDLE) {
+		del_timer(yogurt_run_upper);
 		ssr_off();
+		display_puts("---");
 		return;
 	}
 
@@ -79,15 +107,17 @@ void yogurt_run() {
 
 	//@TODO
 	if (error) {
+		display_puts("Err");
 		return;
 	}
 
-	if (state.step == YOGURT_STEP_MAINTAIN) {
-		if (++state.seconds == 60) {
-			state.minutes++;
-			state.seconds = 0;
-		}
 
+	char buf[4] = {0};
+	sprintf(buf,"%0 d",(int)(temp*1.8+32));
+	display_puts(buf);
+	
+	if (state.step == YOGURT_STEP_MAINTAIN) {
+		//increment happens in upper
 		if (state.minutes >= state.cycle->minutes) {
 			state.cycle++;
 
@@ -96,7 +126,6 @@ void yogurt_run() {
 				state.step = YOGURT_STEP_IDLE;
 			} else {
 				state.step = YOGURT_STEP_ATTAIN;
-
 			}
 		}
 
@@ -110,6 +139,8 @@ void yogurt_run() {
 			state.seconds = 0;
 		}
 	}
+
+	state.last_temp = temp;
 }
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b) {

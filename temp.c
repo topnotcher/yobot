@@ -9,7 +9,6 @@
 #include "threads.h"
 #include "ds2483.h"
 #include "ds18b20.h"
-#include "debug.h"
 #include "error.h"
 #include "config.h"
 
@@ -29,7 +28,7 @@ static void onewire_init(void);
 void temp_init(void) {
 	temp_error = -EINVAL;
 	onewire_init();
-	add_timer(onewire_schedule, TEMP_SECONDS*TIMER_HZ, 1);
+	task_schedule(onewire_schedule);
 }
 
 /**
@@ -44,7 +43,6 @@ void temp_run(void) {
 
 		if (error) {
 			temp_error = error;
-			debug_write("ERROR");
 			continue;
 		}
 
@@ -67,9 +65,7 @@ void temp_run(void) {
 
 			char buf[5] = {0};
 			sprintf(buf, "%d", temp);
-			debug_write(buf);
 		} else {
-			debug_write("ERROR");
 			temp_error = error;
 		}
 	
@@ -101,4 +97,4 @@ static void onewire_resume(void) {
 }
 
 //@TODO!!!
-DS2483_INTERRUPT_HANDLER(ISR(TWIC_TWIM_vect), onewiredev)
+DS2483_INTERRUPT_HANDLER(ONEWIRE_TWI_ISR, onewiredev)

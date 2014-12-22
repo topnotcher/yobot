@@ -70,6 +70,14 @@ typedef struct {
 
 static display_state_t state;
 
+
+static void uart_tx_interrupt_enable(void) {
+	USARTC1.CTRLA |= USART_DREINTLVL_LO_gc;
+}
+
+static void uart_tx_interrupt_disable(void) {
+	USARTC1.CTRLA &= ~USART_DREINTLVL_LO_gc;
+}
 /**
  * Given a character (c), return the segments required to display c
  */
@@ -104,8 +112,13 @@ void display_test() {
  * Write a string to the display
  */
 void display_puts(char str[]) {
-	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i)
+	uint8_t i;
+	for (i = 0; i < DISPLAY_SIZE && str[i]; ++i)
 		display_buffer[2-i] = get_mapped_char(str[i]);
+
+	for ( ; i < DISPLAY_SIZE; ++i)
+		display_buffer[2-i] = 0;
+
 	display_write();
 }
 
@@ -145,7 +158,7 @@ static inline void xlat_trigger() {
 }
 
 static inline void display_write_byte(void) {
-	DISPLAY_SPI.DATA = display_buffer[state.bytes++];
+	USARTC1.DATA = display_buffer[state.bytes++];
 }
 
 static void display_write() {	
@@ -157,20 +170,25 @@ static void display_write() {
 	//never be displayed. It is, however, possible that some bytes from the
 	//current buffer have been written, then the buffer is replaced, and then
 	//the remaining byte is written out before this runs. This is unlikely.
+
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+		uart_tx_interrupt_enable();
 		state.bytes = 0;
 		state.status = DISPLAY_STATUS_BUSY;
-		display_write_byte();
+		//display_write_byte();
 	}
 }
 
-ISR(DISPLAY_SPI_vect) {
+ISR(USARTC1_DRE_vect) {
+	display_write_byte();
+
 	if (state.bytes == DISPLAY_SIZE) {
-		xlat_trigger();
 		state.status = DISPLAY_STATUS_IDLE;
-	} else {
-		display_write_byte();
+		uart_tx_interrupt_disable();
 	}
+}
+ISR(USARTC1_TXC_vect) {
+	xlat_trigger();
 }
 
 /**
@@ -178,12 +196,39 @@ ISR(DISPLAY_SPI_vect) {
  */
 void display_init() {
 
+/*#define DISPLAY_SCLK_PIN 7
+#define DISPLAY_SOUT_PIN 5
+#define DISPLAY_XLAT_PIN 4
+	TXD1 = 7, RXD1 = 6, XCK1 = 5
+	*/
+/*
 	DISPLAY_PORT.DIRSET = _SCLK_bm | _SOUT_bm | _XLAT_bm;
 	DISPLAY_PORT.OUTSET = _SCLK_bm | _SOUT_bm;
 	DISPLAY_PORT.OUTCLR = _XLAT_bm;
 	
-	DISPLAY_SPI.CTRL = SPI_ENABLE_bm | SPI_MASTER_bm | SPI_PRESCALER_DIV4_gc | SPI_DORD_bm;
+	//DISPLAY_SPI.CTRL = SPI_ENABLE_bm | SPI_MASTER_bm | SPI_PRESCALER_DIV128_gc | SPI_DORD_bm;
 	DISPLAY_SPI.INTCTRL = SPI_INTLVL_LO_gc;
+	*/
+
+	//0 = fastest; 1 = 8mhz
+	uint16_t bsel = 1;
+	int8_t bscale = 0;
+
+	//BSEL
+	USARTC1.BAUDCTRLA = (uint8_t)( bsel & 0x00FF );
+	USARTC1.BAUDCTRLB = (bscale<<USART_BSCALE_gp) | (uint8_t)( (bsel>>8) & 0x0F ) ;
+
+	USARTC1.CTRLA |= USART_TXCINTLVL0_bm;
+	USARTC1.CTRLC |= /*USART_CHSIZE_8BIT_gc |*/ USART_CMODE_MSPI_gc | _BV(2)/* | _BV(1)*/;
+	USARTC1.CTRLB |= USART_TXEN_bm;
+
+	//xmegaA, p237
+	PORTC.DIRSET = PIN7_bm | _XLAT_bm | PIN5_bm;
+
+	PORTC.OUTSET = PIN7_bm;
+	PORTC.OUTCLR = _XLAT_bm;
+
+	//PORTC.PIN7CTRL |= PORT_INVEN_bm;
 
 	state.status = DISPLAY_STATUS_IDLE;
 	state.bytes = 0;
