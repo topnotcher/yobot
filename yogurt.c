@@ -114,7 +114,7 @@ static void yogurt_run_lower() {
 
 
 	char buf[4] = {0};
-	sprintf(buf,"%0 d",(int)(temp*1.8+32));
+	sprintf(buf,"%3d",(int)(temp*1.8+32));
 	display_puts(buf);
 	
 	if (state.step == YOGURT_STEP_MAINTAIN) {
