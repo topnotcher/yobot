@@ -160,7 +160,7 @@ static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_te
 
 	if (*cur_temp < maintain_temp)
 		ssr_on();
-	else if (*cur_temp > maintain_temp)
+	else if (*cur_temp >= maintain_temp)
 		ssr_off();
 
 	return err;
