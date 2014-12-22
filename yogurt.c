@@ -70,6 +70,7 @@ static void yogurt_start() {
 	int8_t err = get_temp(&state.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
+		display_puts("Err");
 		task_schedule(yogurt_start);
 	} else {
 		state.cycle = &yogurt_cycles[0];
