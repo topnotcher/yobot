@@ -62,9 +62,6 @@ void temp_run(void) {
 
 	
 			temp_error = 0;
-
-			char buf[5] = {0};
-			sprintf(buf, "%d", temp);
 		} else {
 			temp_error = error;
 		}
