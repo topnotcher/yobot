@@ -5,6 +5,8 @@
 #include <avr/io.h>
 #include "display.h"
 #include "config.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 #define _SCLK_bm DISPLAY_PIN(DISPLAY_SCLK_PIN)
 #define _SOUT_bm DISPLAY_PIN(DISPLAY_SOUT_PIN)
@@ -12,6 +14,7 @@
 
 static inline void xlat_trigger(void);
 static inline void display_write_byte(void);
+static void display_puts(char str[]);
 static void display_write(void);
 static uint8_t get_mapped_char(char);
 
@@ -94,6 +97,16 @@ static uint8_t get_mapped_char(char c) {
 	return 0;
 }
 
+int printf(const char *fmt, ...) {
+	char buf[DISPLAY_SIZE+1] = {0};
+	va_list ap;
+	va_start(ap,fmt);
+	int ret = vsnprintf(buf, DISPLAY_SIZE+1, fmt, ap);
+	display_puts(buf);
+	return ret;
+}
+
+
 /**
  * Call repeatedly with a delay to test the segments
  */
@@ -111,7 +124,7 @@ void display_test() {
 /**
  * Write a string to the display
  */
-void display_puts(char str[]) {
+static void display_puts(char str[]) {
 	uint8_t i;
 	for (i = 0; i < DISPLAY_SIZE && str[i]; ++i)
 		display_buffer[2-i] = get_mapped_char(str[i]);
@@ -120,36 +133,6 @@ void display_puts(char str[]) {
 		display_buffer[2-i] = 0;
 
 	display_write();
-}
-
-/*
- * write a character to the display (fill all digits)
- */
-void display_putchar(char c) {
-	display_buffer[0] = get_mapped_char(c);
-	display_buffer[1] = get_mapped_char(c);
-	display_buffer[2] = get_mapped_char(c);
-
-	display_write();
-}
-
-/**
- * write an 'integer' to the display
- */
-void display_puti(uint8_t n) {
-	char str[DISPLAY_SIZE] = {0};
-	//least significant digit first
-	for (int8_t i = DISPLAY_SIZE-1; i >= 0; --i) {
-		uint8_t digit = n%10;
-		n /= 10;
-
-		//don't print leading zeroes
-		if (digit == 0 && i < 2 && n == 0)
-			break;
-
-		str[i] = digit + 0x30;
-	}
-	display_puts(str);
 }
 
 static inline void xlat_trigger() {

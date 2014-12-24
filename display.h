@@ -8,8 +8,5 @@
 
 
 void display_init(void);
-void display_putchar(char);
-void display_puts(char str[]);
 void display_test(void);
-void display_puti(uint8_t n);
 #endif

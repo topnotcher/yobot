@@ -8,12 +8,6 @@
 //#include "debug.h"
 #include <stdio.h>
 
-/*
-void display_puts(char *s) {
-	debug_write(s);
-}
-*/
-
 //stage 1 heats to 185F for 10 minutes to sterilize
 //stage 2 cools the milk to 110F and holds for 10 minutes
 //stage 3 incubates at 100F for 8 hours
@@ -70,7 +64,7 @@ static void yogurt_start() {
 	int8_t err = get_temp(&state.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
-		display_puts("Err");
+		printf("Err");
 		task_schedule(yogurt_start);
 	} else {
 		state.cycle = &yogurt_cycles[0];
@@ -99,7 +93,7 @@ static void yogurt_run_lower() {
 	if (state.step == YOGURT_STEP_IDLE) {
 		del_timer(yogurt_run_upper);
 		ssr_off();
-		display_puts("---");
+		printf("---");
 		return;
 	}
 
@@ -108,14 +102,12 @@ static void yogurt_run_lower() {
 
 	//@TODO
 	if (error) {
-		display_puts("Err");
+		printf("Err");
 		return;
 	}
 
 
-	char buf[4] = {0};
-	sprintf(buf,"%3d",(int)(temp*1.8+32));
-	display_puts(buf);
+	printf("%3d",(int)(temp*1.8+32));
 	
 	if (state.step == YOGURT_STEP_MAINTAIN) {
 		//increment happens in upper
