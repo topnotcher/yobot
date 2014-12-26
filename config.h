@@ -37,4 +37,37 @@
 //check the temperature every ... seconds
 #define TEMP_SECONDS 2
 
+
+/***************************************
+ * Keypad configuration
+ **************************************/
+
+// PORT and interrupt vector for keypad pins.
+#define KEYPAD_PORT PORTA
+#define KEYPAD_ISR ISR(PORTA_INT0_vect)
+/*
+ * Map the port pins to the keypad rows columns.
+ * "KEYPAD_PIN_R2 6" means row 2 on the keypad is 
+ * connected to PIN6 on the port (PA6). 
+ */
+#define KEYPAD_PIN_R1 1
+#define KEYPAD_PIN_R2 6
+#define KEYPAD_PIN_R3 0
+#define KEYPAD_PIN_R4 3
+#define KEYPAD_PIN_C1 5
+#define KEYPAD_PIN_C2 2
+#define KEYPAD_PIN_C3 4
+
+/**
+ * In order to kill contact bounce, when a keypress is detected, the keys are
+ * scanned KEYPAD_SCAN_SAMPLES every KEYPAD_SCAN_DELAY milliseconds. This
+ * happens twice: once for the rows, once for the cols. Thus delay=5, samples
+ * = 3 => 30ms spent reading a key.
+ */
+#define KEYPAD_SCAN_DELAY 5
+#define KEYPAD_SCAN_SAMPLES 3
+
+//after keypress is recorded, ignore keypresses for this many milliseconds
+#define KEYPAD_REPEAT_RATE 250
+
 #endif

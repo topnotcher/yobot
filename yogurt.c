@@ -5,7 +5,7 @@
 #include "timer.h"
 #include "yogurt.h"
 #include "display.h"
-//#include "debug.h"
+#include "keypad.h"
 #include <stdio.h>
 
 //stage 1 heats to 185F for 10 minutes to sterilize
@@ -54,17 +54,17 @@ static void yogurt_run_lower(void);
 
 void yogurt_init() {
 	display_init();
+	keypad_init();
 	temp_init();
 	ssr_init();
-	//debug_init();
 	task_schedule(yogurt_start);
 }
 
 static void yogurt_start() {
+	printf("---");
 	int8_t err = get_temp(&state.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
-		printf("Err");
 		task_schedule(yogurt_start);
 	} else {
 		state.cycle = &yogurt_cycles[0];

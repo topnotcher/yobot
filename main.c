@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <avr/io.h>
 #include "ssr.h"
 #include "timer.h"
@@ -30,11 +31,8 @@ int main(void) {
 }
 
 static void main_thread(void) {
-	static int i = 0;
-	while (1) {
+	while (1)
 		tasks_run();
-		++i;
-	}
 }
 
 
