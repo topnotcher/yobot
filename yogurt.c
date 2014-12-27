@@ -51,12 +51,14 @@ static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_te
 static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
+static void yogurt_keyhandler(void);
 
 void yogurt_init() {
 	display_init();
 	keypad_init();
 	temp_init();
 	ssr_init();
+	register_keyhandler(yogurt_keyhandler);
 	task_schedule(yogurt_start);
 }
 
@@ -156,4 +158,12 @@ static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_te
 		ssr_off();
 
 	return err;
+}
+
+static void yogurt_keyhandler(void) {
+	char key = keypad_getc();
+	if (!key)
+		return;
+	else
+		printf(" %c", key);
 }
