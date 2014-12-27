@@ -126,13 +126,18 @@ void display_test() {
  */
 static void display_puts(char str[]) {
 	uint8_t i;
+	const uint8_t max = DISPLAY_SIZE-1;
 	for (i = 0; i < DISPLAY_SIZE && str[i]; ++i)
-		display_buffer[2-i] = get_mapped_char(str[i]);
+		display_buffer[max-i] = get_mapped_char(str[i]);
 
 	for ( ; i < DISPLAY_SIZE; ++i)
-		display_buffer[2-i] = 0;
+		display_buffer[max-i] = 0;
 
 	display_write();
+}
+
+void clear(void) {
+	display_puts("");
 }
 
 static inline void xlat_trigger() {

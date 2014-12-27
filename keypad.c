@@ -29,6 +29,7 @@ static void keypad_scan(void);
 static void keypad_scan_end(void);
 
 volatile uint8_t keymask = 0;
+static void (*keyhandler)(void);
 
 typedef struct {
 	uint8_t colmask;
@@ -49,6 +50,10 @@ void keypad_int_enable(void) {
 
 void keypad_int_disable(void) {
 	KEYPAD_PORT.INTCTRL &= ~PORT_INT0LVL_MED_gc;
+}
+
+void register_keyhandler(void (*handler)(void)) {
+	keyhandler = handler;
 }
 
 /**
@@ -158,6 +163,9 @@ static void keypad_scan(void) {
 				keypad_scan_end();
 			} else {
 				keymask = keypad_scanner.colmask | keypad_scanner.rowmask;
+				if (keyhandler)
+					task_schedule(keyhandler);
+
 				add_timer(keypad_scan_end, KEYPAD_REPEAT_RATE, 1);
 			}
 		} else {

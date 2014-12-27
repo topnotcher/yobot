@@ -17,25 +17,16 @@ typedef struct {
 	uint16_t minutes;
 } yogurt_cycle_t;
 
-static yogurt_cycle_t yogurt_cycles[] = {
-	{ .temperature = 85, .minutes = 10 },
-	{ .temperature = 110, .minutes = 10 },
-	{ .temperature = 85, .minutes = 480 },
-
-	//0,0 acts as a dummy value to end the list
-	{ .temperature = 0, .minutes = 0 },
-};
-
 typedef struct {
-	yogurt_cycle_t *cycle;
+	yogurt_cycle_t cycle;
 
 	//each cycle starts by attaining the target temperature.
 	//when the target is achieved, it is maintained.
 	enum {
-		YOGURT_STEP_IDLE,
-		YOGURT_STEP_ATTAIN,
-		YOGURT_STEP_MAINTAIN
-	} step;
+		YOGURT_STATE_IDLE,
+		YOGURT_STATE_ATTAIN,
+		YOGURT_STATE_MAINTAIN
+	} state;
 
 	int16_t last_temp;
 
@@ -44,31 +35,33 @@ typedef struct {
 	uint16_t minutes;
 	uint8_t seconds;
 } yogurt_state_t;
-static yogurt_state_t state;
+static yogurt_state_t control;
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
 static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp);
 static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
+static void yogurt_keyhandler(void);
+
+static void yogurt_keyhandler_idle(char);
 
 void yogurt_init() {
 	display_init();
 	keypad_init();
 	temp_init();
 	ssr_init();
-	task_schedule(yogurt_start);
+	register_keyhandler(yogurt_keyhandler);
+	control.state = YOGURT_STATE_IDLE;
 }
 
 static void yogurt_start() {
-	printf("---");
-	int8_t err = get_temp(&state.last_temp);
+	int8_t err = get_temp(&control.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
 		task_schedule(yogurt_start);
 	} else {
-		state.cycle = &yogurt_cycles[0];
-		state.step = YOGURT_STEP_ATTAIN;
+		control.state = YOGURT_STATE_ATTAIN;
 		add_timer(yogurt_run_upper, 1*TIMER_HZ, TIMER_RUN_UNLIMITED);
 	}
 }
@@ -77,10 +70,10 @@ static void yogurt_start() {
  * This runs via timer
  */
 static void yogurt_run_upper() {
-	if (state.step == YOGURT_STEP_MAINTAIN) {
-		if (++state.seconds == 60) {
-			state.minutes++;
-			state.seconds = 0;
+	if (control.state == YOGURT_STATE_MAINTAIN) {
+		if (++control.seconds == 60) {
+			control.minutes++;
+			control.seconds = 0;
 		}
 	}
 	task_schedule(yogurt_run_lower);
@@ -90,15 +83,15 @@ static void yogurt_run_upper() {
  * This runs after yogurt_run_upper() -- outside of timer context
  */
 static void yogurt_run_lower() {
-	if (state.step == YOGURT_STEP_IDLE) {
+	if (control.state == YOGURT_STATE_IDLE) {
 		del_timer(yogurt_run_upper);
 		ssr_off();
-		printf("---");
+		clear();
 		return;
 	}
 
 	int16_t temp;
-	int8_t error = yogurt_maintain_temperature(state.cycle->temperature, &temp);
+	int8_t error = yogurt_maintain_temperature(control.cycle.temperature, &temp);
 
 	//@TODO
 	if (error) {
@@ -109,31 +102,25 @@ static void yogurt_run_lower() {
 
 	printf("%3d",(int)(temp*1.8+32));
 	
-	if (state.step == YOGURT_STEP_MAINTAIN) {
+	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper
-		if (state.minutes >= state.cycle->minutes) {
-			state.cycle++;
-
-			if (state.cycle->temperature == 0 && state.cycle->minutes == 0) {
+		if (control.minutes >= control.cycle.minutes) {
 				ssr_off();
-				state.step = YOGURT_STEP_IDLE;
-			} else {
-				state.step = YOGURT_STEP_ATTAIN;
-			}
+				control.state = YOGURT_STATE_IDLE;
 		}
 
-	} else if (state.step == YOGURT_STEP_ATTAIN) {
+	} else if (control.state == YOGURT_STATE_ATTAIN) {
 		//temperature could be increasing or decreasing, so we check only to
 		//see if the temperature *crosses* the threshold:
 		//target is in the interval: [last_temp,temp] OR [temp,last_temp]
-		if (temp_in_interval(state.cycle->temperature,state.last_temp,temp)) {
-			state.step = YOGURT_STEP_MAINTAIN;
-			state.minutes = 0;
-			state.seconds = 0;
+		if (temp_in_interval(control.cycle.temperature,control.last_temp,temp)) {
+			control.state = YOGURT_STATE_MAINTAIN;
+			control.minutes = 0;
+			control.seconds = 0;
 		}
 	}
 
-	state.last_temp = temp;
+	control.last_temp = temp;
 }
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b) {
@@ -156,4 +143,78 @@ static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_te
 		ssr_off();
 
 	return err;
+}
+
+static void yogurt_keyhandler(void) {
+	char key = keypad_getc();
+	if (!key)
+		return;
+
+	if (control.state == YOGURT_STATE_IDLE)
+		yogurt_keyhandler_idle(key);
+	else if (key == '#') {
+		control.state = YOGURT_STATE_IDLE;
+		clear();
+	}
+}
+
+static void yogurt_keyhandler_idle(char key) {
+	/**
+	 * ... * to enter temperature
+	 * ... * again to enter time
+	 * ... * again to begin.
+	 *
+	 * (0) doing nothing...
+	 * 
+	 * (1) Enter temperature
+	 * 		- d1
+	 * 		- d2
+	 * 		- d3 1-3? digits.
+	 * 		- * to move to entering time.
+	 * (2) Enter time:
+	 * 		- HH:MM
+	 * 		- * to start the cycle.
+	 */
+
+	static uint8_t step = 0;
+	static uint8_t digits[4] = {0};
+	static int num = 0;
+	static const uint8_t max_digits = 3;
+
+	if (key == '*') {
+		if (step == 0) {
+			step = 1;
+			for (uint8_t i = 0; i < max_digits; ++i)
+				digits[i] = 0;
+			printf("---");
+		} else if (step == 1) {
+			step = 2;
+			control.cycle.temperature = num;
+			for (uint8_t i = 0; i < max_digits; ++i)
+				digits[i] = 0;
+			printf("---");
+		} else if (step == 2) {
+			step = 0;
+			control.cycle.minutes = num;
+			yogurt_start();
+		}
+	} else if (key == '#') {
+		step = 0;
+		clear();
+	} else if (key >= '0' && key <= '9' && step > 0) {
+		for (uint8_t i = max_digits-1; i > 0; --i)
+			digits[i] = digits[i-1];
+
+		digits[0] = key - '0';
+
+		
+		num = 0;
+		int x = 1;
+		for (uint8_t i = 0; i < max_digits; ++i) {
+			num += digits[i]*x;
+			x *= 10;
+		}
+
+		printf("%3d", num);
+	}
 }
