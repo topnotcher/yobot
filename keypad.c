@@ -145,10 +145,10 @@ static void keypad_scan(void) {
 
 			//col was read - try rows
 			} else {
-				add_timer(keypad_scan_timer, KEYPAD_SCAN_DELAY, 1);
 				keypad_scanner.samples = 0;
 				keypad_scanner.state = KEYPAD_STATE_ROWSCAN;
 				keypad_init_rowscan();
+				add_timer(keypad_scan_timer, KEYPAD_SCAN_DELAY, 1);
 			}
 		} else {
 			add_timer(keypad_scan_timer, KEYPAD_SCAN_DELAY, 1);
