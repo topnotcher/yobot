@@ -100,7 +100,7 @@ static void yogurt_run_lower() {
 	}
 
 
-	printf("%3d",(int)(temp*1.8+32));
+	printf("%3d",(int)temp);
 	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper
@@ -136,6 +136,8 @@ static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_te
 		ssr_off();
 		return err;
 	}
+
+	*cur_temp = (*cur_temp)*1.8+32;
 
 	if (*cur_temp < maintain_temp)
 		ssr_on();
