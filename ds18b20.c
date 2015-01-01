@@ -44,7 +44,7 @@ static int8_t ds18b20_write_config(ds2483_dev_t *onewiredev) {
 }
 
 
-int8_t ds18b20_read_temp(ds2483_dev_t *onewiredev, int16_t *temp) {
+int8_t ds18b20_read_temp(ds2483_dev_t *onewiredev, double *temp) {
 	if (!ds2483_1w_rst(onewiredev))
 		return -ENODEV;
 
@@ -58,8 +58,8 @@ int8_t ds18b20_read_temp(ds2483_dev_t *onewiredev, int16_t *temp) {
 	if (chk != 0x13)
 		return -EINVAL;
 
-	//note: the low bits in the low byte are fractional
-	*temp = (low>>4) | (high<<4);
+	//note: the 4 low bits in the low byte are fractional
+	*temp = (low|(high<<8))/16.0; 
 
 	return 0;
 }

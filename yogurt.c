@@ -28,7 +28,7 @@ typedef struct {
 		YOGURT_STATE_MAINTAIN
 	} state;
 
-	int16_t last_temp;
+	double last_temp;
 
 	//counters in current state
 	//these only start when
@@ -37,8 +37,8 @@ typedef struct {
 } yogurt_state_t;
 static yogurt_state_t control;
 
-static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
-static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp);
+static inline uint8_t temp_in_interval(double temp, double a, double b);
+static int8_t yogurt_maintain_temperature(double maintain_temp, double *cur_temp);
 static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
@@ -90,7 +90,7 @@ static void yogurt_run_lower() {
 		return;
 	}
 
-	int16_t temp;
+	double temp;
 	int8_t error = yogurt_maintain_temperature(control.cycle.temperature, &temp);
 
 	//@TODO
@@ -100,7 +100,7 @@ static void yogurt_run_lower() {
 	}
 
 
-	printf("%3d",(int)temp);
+	printf("%3d",(int)(temp+0.5));
 	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper
@@ -123,11 +123,11 @@ static void yogurt_run_lower() {
 	control.last_temp = temp;
 }
 
-static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b) {
+static inline uint8_t temp_in_interval(double temp, double a, double b) {
 	return (temp >= a && temp <= b) || (temp >= b && temp <= a);
 }
 
-static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp) {
+static int8_t yogurt_maintain_temperature(double maintain_temp, double *cur_temp) {
 	int8_t err;
 	err = get_temp(cur_temp);
 

@@ -18,7 +18,7 @@
 static ds2483_dev_t *onewiredev;
 
 static int8_t temp_error;
-static int16_t temp;
+static double temp;
 
 static void onewire_schedule(void);
 static void onewire_resume(void) __attribute__((naked));
@@ -52,8 +52,8 @@ void temp_run(void) {
 		//note: manual indicates max 750ms per conversion 
 		onewire_sleep(TEMP_SECONDS*TIMER_HZ);
 
-		//16 bit operations are not atomic
-		int16_t tmp_temp;
+		//double operations are not atomic
+		double tmp_temp;
 		error = ds18b20_read_temp(onewiredev,&tmp_temp);
 		if (!error) {
 			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -65,11 +65,10 @@ void temp_run(void) {
 		} else {
 			temp_error = error;
 		}
-	
 	}
 }
 
-int8_t get_temp(int16_t *temp_ret) {
+int8_t get_temp(double *temp_ret) {
 	*temp_ret = temp;
 	return temp_error;
 }
