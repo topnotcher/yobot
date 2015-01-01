@@ -43,6 +43,7 @@ static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
 static void yogurt_keyhandler(void);
+static int8_t yogurt_get_temp(double *temp);
 
 static void yogurt_keyhandler_idle(char);
 
@@ -56,7 +57,7 @@ void yogurt_init() {
 }
 
 static void yogurt_start() {
-	int8_t err = get_temp(&control.last_temp);
+	int8_t err = yogurt_get_temp(&control.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
 		task_schedule(yogurt_start);
@@ -127,17 +128,21 @@ static inline uint8_t temp_in_interval(double temp, double a, double b) {
 	return (temp >= a && temp <= b) || (temp >= b && temp <= a);
 }
 
+static int8_t yogurt_get_temp(double *temp) {
+	int8_t err = get_temp(temp);
+	*temp = (*temp)*1.8+32;
+	return err;
+}
+
 static int8_t yogurt_maintain_temperature(double maintain_temp, double *cur_temp) {
 	int8_t err;
-	err = get_temp(cur_temp);
+	err = yogurt_get_temp(cur_temp);
 
 	//always shut the relay off in the event of an error
 	if (err) {
 		ssr_off();
 		return err;
 	}
-
-	*cur_temp = (*cur_temp)*1.8+32;
 
 	if (*cur_temp < maintain_temp)
 		ssr_on();
