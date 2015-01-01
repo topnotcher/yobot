@@ -158,7 +158,6 @@ static inline void set_ticks(void) {
 		//(i.e. the values do not update)
 		while (RTC.STATUS&RTC_SYNCBUSY_bm);
 		RTC.CNT = 0;
-		while (RTC.STATUS&RTC_SYNCBUSY_bm);
 		RTC.COMP = task_list->task.ticks;
 		ticks = task_list->task.ticks;
 		TIMER_INTERRUPT_REGISTER |= TIMER_INTERRUPT_ENABLE_BITS;
