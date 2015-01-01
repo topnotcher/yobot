@@ -35,7 +35,7 @@
  */
 
 //check the temperature every ... seconds
-#define TEMP_SECONDS 2
+#define TEMP_SECONDS 1
 
 
 /***************************************
