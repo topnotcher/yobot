@@ -18,7 +18,7 @@
 static ds2483_dev_t *onewiredev;
 
 static int8_t temp_error;
-static double temp;
+static int16_t temp;
 
 static void onewire_schedule(void);
 static void onewire_resume(void) __attribute__((naked));
@@ -53,7 +53,7 @@ void temp_run(void) {
 		onewire_sleep(TEMP_SECONDS*TIMER_HZ);
 
 		//double operations are not atomic
-		double tmp_temp;
+		int16_t tmp_temp;
 		error = ds18b20_read_temp(onewiredev,&tmp_temp);
 		if (!error) {
 			ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -68,7 +68,7 @@ void temp_run(void) {
 	}
 }
 
-int8_t get_temp(double *temp_ret) {
+int8_t get_temp(int16_t *temp_ret) {
 	*temp_ret = temp;
 	return temp_error;
 }

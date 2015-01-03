@@ -28,7 +28,7 @@ typedef struct {
 		YOGURT_STATE_MAINTAIN
 	} state;
 
-	double last_temp;
+	int16_t last_temp;
 
 	//counters in current state
 	//these only start when
@@ -37,13 +37,13 @@ typedef struct {
 } yogurt_state_t;
 static yogurt_state_t control;
 
-static inline uint8_t temp_in_interval(double temp, double a, double b);
-static int8_t yogurt_maintain_temperature(double maintain_temp, double *cur_temp);
+static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
+static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp);
 static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
 static void yogurt_keyhandler(void);
-static int8_t yogurt_get_temp(double *temp);
+static int8_t yogurt_get_temp(int16_t *temp);
 
 static void yogurt_keyhandler_idle(char);
 
@@ -91,7 +91,7 @@ static void yogurt_run_lower() {
 		return;
 	}
 
-	double temp;
+	int16_t temp;
 	int8_t error = yogurt_maintain_temperature(control.cycle.temperature, &temp);
 
 	//@TODO
@@ -101,7 +101,7 @@ static void yogurt_run_lower() {
 	}
 
 
-	printf("%3d",(int)(temp+0.5));
+	printf("%3d",(int)(temp*9.0/80.0+32.5));
 	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper
@@ -124,17 +124,17 @@ static void yogurt_run_lower() {
 	control.last_temp = temp;
 }
 
-static inline uint8_t temp_in_interval(double temp, double a, double b) {
-	return (temp >= a && temp <= b) || (temp >= b && temp <= a);
+static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b) {
+	//since temperatures are in 1/16ths, +-8 is +-1/2 
+	return (temp >= a-8 && temp <= b+8) || (temp >= b-8 && temp <= a+8);
 }
 
-static int8_t yogurt_get_temp(double *temp) {
-	int8_t err = get_temp(temp);
-	*temp = (*temp)*1.8+32;
-	return err;
+static int8_t yogurt_get_temp(int16_t *temp) {
+	//Temp is in degrees C times 16 (1/16th degree)
+	return get_temp(temp);
 }
 
-static int8_t yogurt_maintain_temperature(double maintain_temp, double *cur_temp) {
+static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp) {
 	int8_t err;
 	err = yogurt_get_temp(cur_temp);
 
@@ -196,7 +196,8 @@ static void yogurt_keyhandler_idle(char key) {
 			printf("---");
 		} else if (step == 1) {
 			step = 2;
-			control.cycle.temperature = num;
+			//convert to 16th degrees C
+			control.cycle.temperature = (num-32)*80.0/9;
 			for (uint8_t i = 0; i < max_digits; ++i)
 				digits[i] = 0;
 			printf("---");
