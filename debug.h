@@ -2,5 +2,5 @@
 #define DEBUG_H
 
 void debug_init(void);
-void debug_write(char *str);
+void debug_write(void *str,const uint8_t size);
 #endif

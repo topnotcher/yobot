@@ -10,14 +10,19 @@
 #define QUEUE_SIZE 5
 #define DEBUG_MAX_LEN 32
 
+typedef struct {
+	uint8_t size;
+	uint8_t data[DEBUG_MAX_LEN];
+} uart_buf;
+
 static void uart_begin_tx(void);
 
 static void uart_tx_interrupt_enable(void) {
-	USARTC1.CTRLA |= USART_DREINTLVL_LO_gc;
+	USARTD0.CTRLA |= USART_DREINTLVL_LO_gc;
 }
 
 static void uart_tx_interrupt_disable(void) {
-	USARTC1.CTRLA &= ~USART_DREINTLVL_LO_gc;
+	USARTD0.CTRLA &= ~USART_DREINTLVL_LO_gc;
 }
 
 typedef struct {
@@ -29,9 +34,8 @@ typedef struct {
 	mempool_t *pool;
 	queue_t *queue;
 
-	uint8_t buf_size;
 	uint8_t buf_pos;
-	uint8_t *buf;
+	uart_buf *buf;
 } uart_t;
 
 static uart_t uart;
@@ -42,23 +46,23 @@ void debug_init(void) {
 	int8_t bscale = -4;
 
 	//BSEL
-	USARTC1.BAUDCTRLA = (uint8_t)( bsel & 0x00FF );
-	USARTC1.BAUDCTRLB = (bscale<<USART_BSCALE_gp) | (uint8_t)( (bsel>>8) & 0x0F ) ;
+	USARTD0.BAUDCTRLA = (uint8_t)( bsel & 0x00FF );
+	USARTD0.BAUDCTRLB = (bscale<<USART_BSCALE_gp) | (uint8_t)( (bsel>>8) & 0x0F ) ;
 
-	USARTC1.CTRLC |= USART_PMODE_DISABLED_gc | USART_CHSIZE_8BIT_gc;
-	USARTC1.CTRLB |= USART_TXEN_bm;
+	USARTD0.CTRLC |= USART_PMODE_DISABLED_gc | USART_CHSIZE_8BIT_gc;
+	USARTD0.CTRLB |= USART_TXEN_bm;
 
 	//xmegaA, p237
-	PORTC.OUTSET = PIN7_bm;
-	PORTC.DIRSET = PIN7_bm;
+	PORTD.OUTSET = PIN3_bm;
+	PORTD.DIRSET = PIN3_bm;
 
-	uart.pool = init_mempool(DEBUG_MAX_LEN,QUEUE_SIZE);
+	uart.pool = init_mempool(sizeof(uart_buf),QUEUE_SIZE);
 	uart.queue = queue_create(QUEUE_SIZE);
 }
 
 //call with interrupts disabled
 static void uart_begin_tx(void) {
-	uint8_t *buf = queue_poll(uart.queue);	
+	uart_buf *buf = queue_poll(uart.queue);	
 
 	if (buf == NULL) {
 		uart.status = UART_STATUS_IDLE;
@@ -67,14 +71,14 @@ static void uart_begin_tx(void) {
 
 	uart.status = UART_STATUS_BUSY;
 	uart.buf = buf;
-	uart.buf_size = strlen((char*)buf);
 	uart.buf_pos = 0;
 	uart_tx_interrupt_enable();
 }
 
-void debug_write(char *str) {
-	void *buf = mempool_alloc(uart.pool);
-	strcpy(buf,str);
+void debug_write(void *data,const uint8_t size) {
+	uart_buf *buf = mempool_alloc(uart.pool);
+	memcpy((void*)(buf->data),data,size);
+	buf->size = size;
 	queue_offer(uart.queue,buf);
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -83,10 +87,10 @@ void debug_write(char *str) {
 	}
 }
 
-ISR(USARTC1_DRE_vect) {
-	USARTC1.DATA = uart.buf[uart.buf_pos];
+ISR(USARTD0_DRE_vect) {
+	USARTD0.DATA = uart.buf->data[uart.buf_pos];
 
-	if (++uart.buf_pos >= uart.buf_size) {
+	if (++uart.buf_pos >= uart.buf->size) {
 		mempool_putref(uart.buf);
 		uart_tx_interrupt_disable();
 

@@ -6,8 +6,11 @@
 #include "yogurt.h"
 #include "display.h"
 #include "keypad.h"
+#include "debug.h"
 #include <stdio.h>
 
+#define MIN(a,b) (((a) > (b))? (b) : (a))
+#define MAX(a,b) (((a) > (b))? (a) : (b))
 //stage 1 heats to 185F for 10 minutes to sterilize
 //stage 2 cools the milk to 110F and holds for 10 minutes
 //stage 3 incubates at 100F for 8 hours
@@ -19,6 +22,7 @@ typedef struct {
 
 typedef struct {
 	yogurt_cycle_t cycle;
+	int16_t next_target;
 
 	//each cycle starts by attaining the target temperature.
 	//when the target is achieved, it is maintained.
@@ -29,6 +33,7 @@ typedef struct {
 	} state;
 
 	int16_t last_temp;
+	int16_t integral;
 
 	//counters in current state
 	//these only start when
@@ -36,6 +41,7 @@ typedef struct {
 	uint8_t seconds;
 } yogurt_state_t;
 static yogurt_state_t control;
+
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
 static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp);
@@ -52,6 +58,7 @@ void yogurt_init() {
 	keypad_init();
 	temp_init();
 	ssr_init();
+	debug_init();
 	register_keyhandler(yogurt_keyhandler);
 	control.state = YOGURT_STATE_IDLE;
 }
@@ -62,7 +69,19 @@ static void yogurt_start() {
 	if (err) {
 		task_schedule(yogurt_start);
 	} else {
+		control.integral = 0;
+		if (control.last_temp < control.cycle.temperature) {
+			if ((control.cycle.temperature - control.last_temp) > 134)
+				control.next_target = control.cycle.temperature-134;
+			else
+				control.next_target = control.last_temp + 12;
+		} else {
+			control.next_target = 0;
+		}
+
 		control.state = YOGURT_STATE_ATTAIN;
+		control.minutes = 0;
+		control.seconds = 0;
 		add_timer(yogurt_run_upper, 1*TIMER_HZ, TIMER_RUN_UNLIMITED);
 	}
 }
@@ -71,12 +90,13 @@ static void yogurt_start() {
  * This runs via timer
  */
 static void yogurt_run_upper() {
-	if (control.state == YOGURT_STATE_MAINTAIN) {
+//how did debug_write send seconds=0, minutes=0 one time????
+//	if (control.state == YOGURT_STATE_MAINTAIN) {
 		if (++control.seconds == 60) {
 			control.minutes++;
 			control.seconds = 0;
 		}
-	}
+	//}
 	task_schedule(yogurt_run_lower);
 }
 
@@ -115,6 +135,7 @@ static void yogurt_run_lower() {
 		//see if the temperature *crosses* the threshold:
 		//target is in the interval: [last_temp,temp] OR [temp,last_temp]
 		if (temp_in_interval(control.cycle.temperature,control.last_temp,temp)) {
+			control.integral = 0;
 			control.state = YOGURT_STATE_MAINTAIN;
 			control.minutes = 0;
 			control.seconds = 0;
@@ -122,6 +143,7 @@ static void yogurt_run_lower() {
 	}
 
 	control.last_temp = temp;
+	debug_write(&control, sizeof(control));
 }
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b) {
@@ -134,9 +156,12 @@ static int8_t yogurt_get_temp(int16_t *temp) {
 	return get_temp(temp);
 }
 
-static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp) {
+static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) {
 	int8_t err;
 	err = yogurt_get_temp(cur_temp);
+
+	//cur_temp + diff = set_point
+	int16_t diff = set_point - *cur_temp;
 
 	//always shut the relay off in the event of an error
 	if (err) {
@@ -144,10 +169,68 @@ static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_te
 		return err;
 	}
 
-	if (*cur_temp < maintain_temp)
-		ssr_on();
-	else if (*cur_temp >= maintain_temp)
-		ssr_off();
+	//fix this
+	static int8_t diff_neg = 0;
+	static int8_t diff_pos = 60;
+	if (diff <= 0) {
+		diff_neg = MIN(diff_neg+1, 60);
+		diff_pos = MAX(diff_pos-1,0);
+	} else { //diff > 0
+		diff_pos = MIN(diff_pos+1, 60);
+		diff_neg = MAX(diff_neg-1,0);
+	}
+
+	//initialize to 1/60th second -- theoretically the
+	//minimum pulse the 0x SSR can output
+	int32_t level = SSR_MAX_LEVEL/60+1;
+
+	if (control.state == YOGURT_STATE_ATTAIN) {
+		// 134 is about 15 degrees F. So if the diff is < 15F, the level
+		// scales down proportionally from 100% to reduce overshoot.
+		level += (int32_t)diff*(SSR_MAX_LEVEL/134);
+
+		//avoid too much? integral windup.
+		if (control.minutes >= 5 && diff < 134 && diff_pos == 60) {
+			//@TODO possibly make gain proportional to time too. (time increases -> increase gain)
+			if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
+				if (control.next_target != 0) {
+					control.integral += (*cur_temp - control.next_target)*60;
+					control.next_target += 12;
+					if (control.next_target > set_point)
+						control.next_target = set_point;
+				}
+			}
+		} else if (diff_neg == 60) {
+			control.integral = 0;
+		}
+
+		level += control.integral;
+
+	//maintain mode - entered within 1 degree F of set point.
+	} else {
+		//proportional coefficient is much higher - hopefully will reduce
+		//transients without significant increase in overshoot... hopefully.
+		level += (int32_t)diff*(SSR_MAX_LEVEL/10);
+
+		//when diff drops below 1 for 60 consecutive iterations, reset the
+		//integral. This reduces oscillation.
+		if (diff_neg == 60) {
+			control.integral = 0;
+		} else if (diff > 0) {
+			if (control.integral < SSR_MAX_LEVEL)
+				control.integral += diff;
+		}
+
+		//this will continue to add the integral term in until diff_neg == 30,
+		level += control.integral;
+	}
+
+	if (level >= (int32_t)SSR_MAX_LEVEL)
+		level = SSR_MAX_LEVEL;
+	else if (level < 0)
+		level = 0;
+
+	ssr_level(level);
 
 	return err;
 }
