@@ -18,7 +18,7 @@
 #define DISPLAY_SOUT_PIN 5
 #define DISPLAY_XLAT_PIN 4
 #define DISPLAY_SPI_vect SPIC_INT_vect
-#define DISPLAY_SIZE 3
+#define DISPLAY_SIZE 8
 
 
 /**

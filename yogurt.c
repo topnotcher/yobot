@@ -61,9 +61,14 @@ void yogurt_init() {
 	debug_init();
 	register_keyhandler(yogurt_keyhandler);
 	control.state = YOGURT_STATE_IDLE;
+	//task_schedule(yogurt_start);
 }
 
 static void yogurt_start() {
+	/*while(1) {
+		printf("12345678");
+		_delay_ms(1000);
+	}*/
 	int8_t err = yogurt_get_temp(&control.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
@@ -121,7 +126,7 @@ static void yogurt_run_lower() {
 	}
 
 
-	printf("%3d",(int)(temp*9.0/80.0+32.5));
+	printf("%4d%2d%2d",(int)(temp*9.0/80.0+32.5),control.minutes,control.seconds);
 	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper
@@ -276,14 +281,14 @@ static void yogurt_keyhandler_idle(char key) {
 			step = 1;
 			for (uint8_t i = 0; i < max_digits; ++i)
 				digits[i] = 0;
-			printf("---");
+			printf(" ---    ");
 		} else if (step == 1) {
 			step = 2;
 			//convert to 16th degrees C
 			control.cycle.temperature = (num-32)*80.0/9;
 			for (uint8_t i = 0; i < max_digits; ++i)
 				digits[i] = 0;
-			printf("---");
+			printf(" ---    ");
 		} else if (step == 2) {
 			step = 0;
 			control.cycle.minutes = num;
@@ -306,6 +311,6 @@ static void yogurt_keyhandler_idle(char key) {
 			x *= 10;
 		}
 
-		printf("%3d", num);
+		printf("%4d    ", num);
 	}
 }

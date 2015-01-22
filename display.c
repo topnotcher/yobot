@@ -199,7 +199,7 @@ void display_init() {
 	*/
 
 	//0 = fastest; 1 = 8mhz
-	uint16_t bsel = 1;
+	uint16_t bsel = 8;
 	int8_t bscale = 0;
 
 	//BSEL
@@ -207,7 +207,7 @@ void display_init() {
 	USARTC1.BAUDCTRLB = (bscale<<USART_BSCALE_gp) | (uint8_t)( (bsel>>8) & 0x0F ) ;
 
 	USARTC1.CTRLA |= USART_TXCINTLVL0_bm;
-	USARTC1.CTRLC |= /*USART_CHSIZE_8BIT_gc |*/ USART_CMODE_MSPI_gc | _BV(2)/* | _BV(1)*/;
+	USARTC1.CTRLC |= /*USART_CHSIZE_8BIT_gc |*/ USART_CMODE_MSPI_gc /*| _BV(2) | _BV(1)*/;
 	USARTC1.CTRLB |= USART_TXEN_bm;
 
 	//xmegaA, p237
