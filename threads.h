@@ -2,7 +2,7 @@
 #define THREADS_H
 
 #define THREADS_CONTEXT_SIZE 38
-#define THREADS_STACK_SIZE 64
+#define THREADS_STACK_SIZE 70
 
 #ifndef NUM_THREADS
 #define NUM_THREADS 5

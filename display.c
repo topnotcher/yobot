@@ -98,7 +98,7 @@ static uint8_t get_mapped_char(char c) {
 }
 
 int printf(const char *fmt, ...) {
-	char buf[DISPLAY_SIZE+1] = {0};
+	static char buf[DISPLAY_SIZE+1] = {0};
 	va_list ap;
 	va_start(ap,fmt);
 	int ret = vsnprintf(buf, DISPLAY_SIZE+1, fmt, ap);

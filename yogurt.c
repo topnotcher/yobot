@@ -65,10 +65,6 @@ void yogurt_init() {
 }
 
 static void yogurt_start() {
-	/*while(1) {
-		printf("12345678");
-		_delay_ms(1000);
-	}*/
 	int8_t err = yogurt_get_temp(&control.last_temp);
 	// keep retrying until a valid temperature is read
 	if (err) {
@@ -126,7 +122,7 @@ static void yogurt_run_lower() {
 	}
 
 
-	printf("%4d%2d%2d",(int)(temp*9.0/80.0+32.5),control.minutes,control.seconds);
+	printf("%4d%2d%02d",(int)(temp*9.0/80.0+32.5),control.minutes,control.seconds);
 	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper
