@@ -200,7 +200,7 @@ static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) 
 			if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
 				if (control.next_target != 0) {
 					control.integral += (*cur_temp - control.next_target)*60;
-					control.next_target += 12;
+					control.next_target = *cur_temp + 12;
 					if (control.next_target > set_point)
 						control.next_target = set_point;
 				}
