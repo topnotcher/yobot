@@ -123,7 +123,11 @@ static void yogurt_run_lower() {
 	}
 
 	if (control.state == YOGURT_STATE_MAINTAIN) {
-		yogurt_print_status(temp,control.cycle.minutes-control.minutes,(control.seconds == 0) ? 0 : 60-control.seconds);
+		yogurt_print_status(temp,
+				(control.cycle.minutes == control.minutes) ? 0
+				: control.cycle.minutes-control.minutes-1,
+				(control.seconds == 0) ? 0 : 60-control.seconds
+		);
 		//increment happens in upper
 		if (control.minutes >= control.cycle.minutes) {
 				ssr_off();
@@ -149,7 +153,7 @@ static void yogurt_run_lower() {
 }
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b) {
-	//since temperatures are in 1/16ths, +-8 is +-1/2 
+	//since temperatures are in 1/16ths, +-8 is +-1/2
 	return (temp >= a-8 && temp <= b+8) || (temp >= b-8 && temp <= a+8);
 }
 
@@ -264,23 +268,6 @@ static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds) 
 }
 
 static void yogurt_keyhandler_idle(char key) {
-	/**
-	 * ... * to enter temperature
-	 * ... * again to enter time
-	 * ... * again to begin.
-	 *
-	 * (0) doing nothing...
-	 * 
-	 * (1) Enter temperature
-	 * 		- d1
-	 * 		- d2
-	 * 		- d3 1-3? digits.
-	 * 		- * to move to entering time.
-	 * (2) Enter time:
-	 * 		- HH:MM
-	 * 		- * to start the cycle.
-	 */
-
 	static uint8_t step = 0;
 	static uint8_t digits[4] = {0};
 	static int num = 0;
@@ -298,7 +285,7 @@ static void yogurt_keyhandler_idle(char key) {
 			control.cycle.temperature = (num-32)*80.0/9;
 			for (uint8_t i = 0; i < max_digits; ++i)
 				digits[i] = 0;
-			printf(" ---    ");
+			printf("    --:--");
 		} else if (step == 2) {
 			step = 0;
 			control.cycle.minutes = num;
@@ -313,14 +300,20 @@ static void yogurt_keyhandler_idle(char key) {
 
 		digits[0] = key - '0';
 
-		
-		num = 0;
-		int x = 1;
-		for (uint8_t i = 0; i < max_digits; ++i) {
-			num += digits[i]*x;
-			x *= 10;
+		if (step == 1) {
+			num = 0;
+			int x = 1;
+			for (uint8_t i = 0; i < max_digits; ++i) {
+				num += digits[i]*x;
+				x *= 10;
+			}
+			printf("%4d    ", num);
+		} else if (step == 2) {
+			uint8_t hours = digits[3]*10 + digits[2];
+			uint8_t minutes = digits[1]*10 + digits[0];
+			num = hours*60 + minutes;
+			printf("    %02d:%02d",hours,minutes);
 		}
 
-		printf("%4d    ", num);
 	}
 }
