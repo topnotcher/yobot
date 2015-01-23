@@ -50,6 +50,7 @@ static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
 static void yogurt_keyhandler(void);
 static int8_t yogurt_get_temp(int16_t *temp);
+static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds);
 
 static void yogurt_keyhandler_idle(char);
 
@@ -121,10 +122,8 @@ static void yogurt_run_lower() {
 		return;
 	}
 
-
-	printf("%4d%2d:%02d",(int)(temp*9.0/80.0+32.5),control.minutes,control.seconds);
-	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
+		yogurt_print_status(temp,control.cycle.minutes-control.minutes,(control.seconds == 0) ? 0 : 60-control.seconds);
 		//increment happens in upper
 		if (control.minutes >= control.cycle.minutes) {
 				ssr_off();
@@ -132,10 +131,12 @@ static void yogurt_run_lower() {
 		}
 
 	} else if (control.state == YOGURT_STATE_ATTAIN) {
+		yogurt_print_status(temp,control.minutes,control.seconds);
 		//temperature could be increasing or decreasing, so we check only to
 		//see if the temperature *crosses* the threshold:
 		//target is in the interval: [last_temp,temp] OR [temp,last_temp]
 		if (temp_in_interval(control.cycle.temperature,control.last_temp,temp)) {
+			yogurt_print_status(temp,control.cycle.minutes,control.seconds);
 			control.integral = 0;
 			control.state = YOGURT_STATE_MAINTAIN;
 			control.minutes = 0;
@@ -247,6 +248,19 @@ static void yogurt_keyhandler(void) {
 		control.state = YOGURT_STATE_IDLE;
 		clear();
 	}
+}
+
+static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds) {
+	int16_t n1,n2;
+	if (minutes >= 60) {
+		n1 = minutes/60;
+		n2 = minutes-60*n1;
+	} else {
+		n1 = minutes;
+		n2 = seconds;
+	}
+
+	printf("%4d%2d:%02d",(int)(temp*9.0/80.0+32.5),n1,n2);
 }
 
 static void yogurt_keyhandler_idle(char key) {
