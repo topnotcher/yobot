@@ -122,7 +122,7 @@ static void yogurt_run_lower() {
 	}
 
 
-	printf("%4d%2d%02d",(int)(temp*9.0/80.0+32.5),control.minutes,control.seconds);
+	printf("%4d%2d:%02d",(int)(temp*9.0/80.0+32.5),control.minutes,control.seconds);
 	
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		//increment happens in upper

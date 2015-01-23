@@ -23,6 +23,7 @@ static uint8_t get_mapped_char(char);
  * segments need to be turned on to display the given character
  * e.g. 0 requires all of the outer segments: ABCDEF = 0b11111100
  */
+#define DP_BM _BV(0) // decimal point
 static const uint8_t display_charmap[][2] = {
 	//ABCDEFG.
 	{ '0', 0b11111100 },
@@ -35,6 +36,7 @@ static const uint8_t display_charmap[][2] = {
 	{ '7', 0b11100000 },
 	{ '8', 0b11111110 },
 	{ '9', 0b11100110 },
+	{ ' ', 0b00000000 },
 	{ '-', 0b00000010 },
 	{ 'E', 0b10011110 },
 	{ 'F', 0b10001110 },
@@ -52,7 +54,6 @@ static const uint8_t display_charmap[][2] = {
 	{ 'n', 0b00101010 },
 	{ 'o', 0b00111010 },
 	{ '_', 0b00010000 },
-	{ ' ', 0b00000000 },
 	{ 'r', 0b11001100 },
 
 	//null: leave this last.
@@ -98,10 +99,10 @@ static uint8_t get_mapped_char(char c) {
 }
 
 int printf(const char *fmt, ...) {
-	static char buf[DISPLAY_SIZE+1] = {0};
+	static char buf[DISPLAY_SIZE+5] = {0};
 	va_list ap;
 	va_start(ap,fmt);
-	int ret = vsnprintf(buf, DISPLAY_SIZE+1, fmt, ap);
+	int ret = vsnprintf(buf, DISPLAY_SIZE+5, fmt, ap);
 	display_puts(buf);
 	return ret;
 }
@@ -125,13 +126,28 @@ void display_test() {
  * Write a string to the display
  */
 static void display_puts(char str[]) {
-	uint8_t i;
+	uint8_t i,len,add_dp = 0;
 	const uint8_t max = DISPLAY_SIZE-1;
-	for (i = 0; i < DISPLAY_SIZE && str[i]; ++i)
-		display_buffer[max-i] = get_mapped_char(str[i]);
+	for (i = 0, len = 0; len < DISPLAY_SIZE && str[i]; ++i) {
+		if (str[i] == '.' && len > 0) {
+			display_buffer[max-(len-1)] |= DP_BM;
+		} else if (str[i] == ':' && len > 0) {
+			display_buffer[max-(len-1)] |= DP_BM;
+			add_dp = 1;
+		} else {
+			display_buffer[max-len] = get_mapped_char(str[i]);
 
-	for ( ; i < DISPLAY_SIZE; ++i)
-		display_buffer[max-i] = 0;
+			if (add_dp) {
+				display_buffer[max-len] |= DP_BM;
+				add_dp = 0;
+			}
+		
+			len++;
+		}
+	}
+
+	for ( ; len < DISPLAY_SIZE; ++len)
+		display_buffer[max-len] = 0;
 
 	display_write();
 }
