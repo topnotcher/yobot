@@ -50,13 +50,16 @@
  * "KEYPAD_PIN_R2 6" means row 2 on the keypad is 
  * connected to PIN6 on the port (PA6). 
  */
-#define KEYPAD_PIN_R1 6
-#define KEYPAD_PIN_R2 0
-#define KEYPAD_PIN_R3 4
-#define KEYPAD_PIN_R4 2
-#define KEYPAD_PIN_C1 5
-#define KEYPAD_PIN_C2 3
-#define KEYPAD_PIN_C3 1
+/*4 connects R4,C1
+7 clears... C1 should be R4...*/
+#define KEYPAD_PIN_R1 3
+#define KEYPAD_PIN_R2 5
+#define KEYPAD_PIN_R3 1
+#define KEYPAD_PIN_R4 7
+#define KEYPAD_PIN_C1 2
+#define KEYPAD_PIN_C2 4
+#define KEYPAD_PIN_C3 6
+#define KEYPAD_PIN_C4 0
 
 /**
  * In order to kill contact bounce, when a keypress is detected, the keys are

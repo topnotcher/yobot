@@ -76,6 +76,7 @@ static void keypad_init_colscan(void) {
 	KEYPAD_PINCTRL(C1) = PORT_OPC_PULLUP_gc | PORT_ISC_FALLING_gc;
 	KEYPAD_PINCTRL(C2) = PORT_OPC_PULLUP_gc | PORT_ISC_FALLING_gc;
 	KEYPAD_PINCTRL(C3) = PORT_OPC_PULLUP_gc | PORT_ISC_FALLING_gc;
+	KEYPAD_PINCTRL(C4) = PORT_OPC_PULLUP_gc | PORT_ISC_FALLING_gc;
 }
 
 /**
@@ -220,6 +221,14 @@ char keypad_getc(void) {
 			return '*';
 		case KEY_POUND:
 			return '#';
+		case KEY_F1:
+			return 'a';
+		case KEY_F2:
+			return 'b';
+		case KEY_F3:
+			return 'c';
+		case KEY_F4:
+			return 'd';
 		default:
 			return '\0';
 	}
