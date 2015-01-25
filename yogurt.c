@@ -271,16 +271,18 @@ static void yogurt_keyhandler_idle(char key) {
 	static uint8_t step = 0;
 	static uint8_t digits[4] = {0};
 	static int num = 0;
-	static const uint8_t max_digits = 3;
+	static uint8_t max_digits = 3;
 
 	if (key == '*') {
 		if (step == 0) {
 			step = 1;
+			max_digits = 3;
 			for (uint8_t i = 0; i < max_digits; ++i)
 				digits[i] = 0;
 			printf(" ---    ");
 		} else if (step == 1) {
 			step = 2;
+			max_digits = 4;
 			//convert to 16th degrees C
 			control.cycle.temperature = (num-32)*80.0/9;
 			for (uint8_t i = 0; i < max_digits; ++i)
