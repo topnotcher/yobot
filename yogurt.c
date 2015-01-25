@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <util/delay.h>
 #include "temp.h"
 #include "ssr.h"
@@ -6,8 +7,8 @@
 #include "yogurt.h"
 #include "display.h"
 #include "keypad.h"
+#include "alarm.h"
 #include "debug.h"
-#include <stdio.h>
 
 #define MIN(a,b) (((a) > (b))? (b) : (a))
 #define MAX(a,b) (((a) > (b))? (a) : (b))
@@ -60,9 +61,9 @@ void yogurt_init() {
 	temp_init();
 	ssr_init();
 	debug_init();
+	alarm_init();
 	register_keyhandler(yogurt_keyhandler);
 	control.state = YOGURT_STATE_IDLE;
-	//task_schedule(yogurt_start);
 }
 
 static void yogurt_start() {
@@ -131,6 +132,7 @@ static void yogurt_run_lower() {
 		//increment happens in upper
 		if (control.minutes >= control.cycle.minutes) {
 				ssr_off();
+				alarm_on();
 				control.state = YOGURT_STATE_IDLE;
 		}
 
@@ -143,6 +145,7 @@ static void yogurt_run_lower() {
 			yogurt_print_status(temp,control.cycle.minutes,control.seconds);
 			control.integral = 0;
 			control.state = YOGURT_STATE_MAINTAIN;
+			alarm_on();
 			control.minutes = 0;
 			control.seconds = 0;
 		}
@@ -246,11 +249,14 @@ static void yogurt_keyhandler(void) {
 	if (!key)
 		return;
 
-	if (control.state == YOGURT_STATE_IDLE)
+	if (key == 'd') {
+		alarm_off();
+	} else if (control.state == YOGURT_STATE_IDLE) {
 		yogurt_keyhandler_idle(key);
-	else if (key == '#') {
+	} else if (key == '#') {
 		control.state = YOGURT_STATE_IDLE;
 		clear();
+		alarm_off();
 	}
 }
 
