@@ -203,7 +203,7 @@ static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) 
 			//@TODO possibly make gain proportional to time too. (time increases -> increase gain)
 			if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
 				if (control.next_target != 0) {
-					control.integral += (control.next_target - *cur_temp)*120;
+					control.integral += (control.next_target - *cur_temp)*160;
 					control.next_target = *cur_temp + 12;
 					if (control.next_target > set_point)
 						control.next_target = set_point;
@@ -226,8 +226,9 @@ static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) 
 		if (diff_neg == 60) {
 			control.integral = 0;
 		} else if (diff > 0) {
-			if (control.integral < SSR_MAX_LEVEL)
-				control.integral += diff;
+			int16_t add = 2*diff;
+			if (control.integral <= SSR_MAX_LEVEL-add)
+				control.integral += add;
 		}
 
 		//this will continue to add the integral term in until diff_neg == 30,
