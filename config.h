@@ -74,4 +74,11 @@
 //after keypress is recorded, ignore keypresses for this many milliseconds
 #define KEYPAD_REPEAT_RATE 250
 
+/**
+ * Alarm Configuration
+ */
+
+#define ALARM_PORT PORTD
+#define ALARM_PIN 0
+
 #endif
