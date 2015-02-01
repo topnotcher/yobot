@@ -43,7 +43,9 @@ static yogurt_state_t control;
 
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
-static int8_t yogurt_maintain_temperature(int16_t maintain_temp, int16_t *cur_temp);
+static int8_t yogurt_temperature_control(int16_t *cur_temp);
+static inline int32_t yogurt_maintain_temperature(int32_t level, int16_t diff, int8_t diff_neg, int8_t diff_pos, int16_t *cur_temp);
+static inline int32_t yogurt_attain_temperature(int32_t level, int16_t diff, int8_t diff_neg, int8_t diff_pos, int16_t *cur_temp);
 static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
@@ -111,7 +113,7 @@ static void yogurt_run_lower() {
 	}
 
 	int16_t temp;
-	int8_t error = yogurt_maintain_temperature(control.cycle.temperature, &temp);
+	int8_t error = yogurt_temperature_control(&temp);
 
 	if (error) {
 		printf("Err");
@@ -154,12 +156,12 @@ static int8_t yogurt_get_temp(int16_t *temp) {
 	return get_temp(temp);
 }
 
-static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) {
+static int8_t yogurt_temperature_control(int16_t *cur_temp) {
 	int8_t err;
 	err = yogurt_get_temp(cur_temp);
 
 	//cur_temp + diff = set_point
-	int16_t diff = set_point - *cur_temp;
+	int16_t diff = control.cycle.temperature - *cur_temp;
 
 	//always shut the relay off in the event of an error
 	if (err) {
@@ -183,50 +185,9 @@ static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) 
 	int32_t level = SSR_MAX_LEVEL/60+1;
 
 	if (control.state == YOGURT_STATE_ATTAIN) {
-		// 134 is about 15 degrees F - So proportional
-		// control activates within 15 degrees of target
-		level += (int32_t)diff*(SSR_MAX_LEVEL/134);
-
-		// attempts to avoid integral windup.
-		if (control.minutes >= 5 && diff < 134 && diff_pos == 60) {
-
-			//every two minutes
-			if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
-
-				// next_target reduces integral windup by raising the target
-				// temperature by 12 at a time, so the diff used for the integral
-				// can never exceed 12.
-				if (control.next_target != 0) {
-					control.integral += (control.next_target - *cur_temp)*160;
-					control.next_target = *cur_temp + 12;
-					if (control.next_target > set_point)
-						control.next_target = set_point;
-				}
-			}
-		} else if (diff_neg == 60) {
-			control.integral = 0;
-		}
-
-		level += control.integral;
-
-	//maintain mode - entered within 1 degree F of set point.
+		level += yogurt_attain_temperature(level,diff,diff_neg,diff_pos,cur_temp);
 	} else {
-		//proportional coefficient is much higher - hopefully will reduce
-		//transients without significant increase in overshoot... hopefully.
-		level += (int32_t)diff*(SSR_MAX_LEVEL/10);
-
-		//when diff drops below 1 for 60 consecutive iterations, reset the
-		//integral. This reduces oscillation.
-		if (diff_neg == 60) {
-			control.integral = 0;
-		} else if (diff > 0) {
-			int16_t add = 2*diff;
-			if (control.integral <= SSR_MAX_LEVEL-add)
-				control.integral += add;
-		}
-
-		//this will continue to add the integral term in until diff_neg == 30,
-		level += control.integral;
+		level += yogurt_maintain_temperature(level,diff,diff_neg,diff_pos,cur_temp);
 	}
 
 	if (level >= (int32_t)SSR_MAX_LEVEL)
@@ -237,6 +198,56 @@ static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) 
 	ssr_level(level);
 
 	return err;
+}
+
+/**
+ * This does basic PID control while attaining the target temperature
+ */
+static inline int32_t yogurt_attain_temperature(int32_t level, int16_t diff, int8_t diff_neg, int8_t diff_pos, int16_t *cur_temp) {
+
+	// 134 is about 15 degrees F - So proportional
+	// control activates within 15 degrees of target
+	level += (int32_t)diff*(SSR_MAX_LEVEL/134);
+
+	// attempts to avoid integral windup.
+	if (control.minutes >= 5 && diff < 134 && diff_pos == 60) {
+
+		//every two minutes
+		if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
+
+			// next_target reduces integral windup by raising the target
+			// temperature by 12 at a time, so the diff used for the integral
+			// can never exceed 12.
+			if (control.next_target != 0) {
+				control.integral += (control.next_target - *cur_temp)*160;
+				control.next_target = *cur_temp + 12;
+				if (control.next_target > control.cycle.temperature)
+					control.next_target = control.cycle.temperature;
+			}
+		}
+	} else if (diff_neg == 60) {
+		control.integral = 0;
+	}
+
+	return level + control.integral;
+}
+
+static inline int32_t yogurt_maintain_temperature(int32_t level, int16_t diff, int8_t diff_neg, int8_t diff_pos, int16_t *cur_temp) {
+	//proportional coefficient is much higher - hopefully will reduce
+	//transients without significant increase in overshoot... hopefully.
+	level += (int32_t)diff*(SSR_MAX_LEVEL/10);
+
+	//when diff drops below 1 for 60 consecutive iterations, reset the
+	//integral. This reduces oscillation.
+	if (diff_neg == 60) {
+		control.integral = 0;
+	} else if (diff > 0) {
+		int16_t add = 2*diff;
+		if (control.integral <= SSR_MAX_LEVEL-add)
+			control.integral += add;
+	}
+
+	return level + control.integral;
 }
 
 static void yogurt_keyhandler(void) {
