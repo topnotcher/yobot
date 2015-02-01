@@ -61,10 +61,9 @@ static const uint8_t display_charmap[][2] = {
 
 };
 
-static uint8_t display_buffer[DISPLAY_SIZE] = {0};
-
 typedef struct {
 	uint8_t bytes;
+	uint8_t buf[DISPLAY_SIZE];
 } display_state_t;
 
 static display_state_t state;
@@ -109,7 +108,7 @@ int printf(const char *fmt, ...) {
 void display_test() {
 	static uint8_t bm = 1;
 	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i)
-		display_buffer[i] = bm;
+		state.buf[i] = bm;
 	display_write();
 	if (bm == 1<<7)
 		bm = 1;
@@ -125,24 +124,24 @@ static void display_puts(char str[]) {
 	const uint8_t max = DISPLAY_SIZE-1;
 	for (i = 0, len = 0; len < DISPLAY_SIZE && str[i]; ++i) {
 		if (str[i] == '.' && len > 0) {
-			display_buffer[max-(len-1)] |= DP_BM;
+			state.buf[max-(len-1)] |= DP_BM;
 		} else if (str[i] == ':' && len > 0) {
-			display_buffer[max-(len-1)] |= DP_BM;
+			state.buf[max-(len-1)] |= DP_BM;
 			add_dp = 1;
 		} else {
-			display_buffer[max-len] = get_mapped_char(str[i]);
+			state.buf[max-len] = get_mapped_char(str[i]);
 
 			if (add_dp) {
-				display_buffer[max-len] |= DP_BM;
+				state.buf[max-len] |= DP_BM;
 				add_dp = 0;
 			}
-		
+
 			len++;
 		}
 	}
 
 	for ( ; len < DISPLAY_SIZE; ++len)
-		display_buffer[max-len] = 0;
+		state.buf[max-len] = 0;
 
 	display_write();
 }
@@ -157,7 +156,7 @@ static inline void xlat_trigger() {
 }
 
 static inline void display_write_byte(void) {
-	USARTC1.DATA = display_buffer[state.bytes++];
+	USARTC1.DATA = state.buf[state.bytes++];
 }
 
 static void display_write() {	
@@ -229,7 +228,7 @@ void display_init() {
 	state.bytes = 0;
 	
 	for ( uint8_t i = 0; i < DISPLAY_SIZE; ++i ) 
-		display_buffer[i] = 0;
+		state.buf[i] = 0;
 
 	//this will not run until interrupts are enabled.
 	display_write();
