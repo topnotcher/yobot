@@ -32,11 +32,6 @@ typedef struct {
 		YOGURT_STATE_MAINTAIN
 	} state;
 
-	struct {
-		uint8_t timer:1;
-		uint8_t thermo:1;
-	} extras;
-
 	int16_t last_temp;
 	int16_t integral;
 
@@ -47,6 +42,11 @@ typedef struct {
 } yogurt_state_t;
 static yogurt_state_t control;
 
+static struct {
+	uint8_t timer:1;
+	uint8_t thermo:1;
+} extras;
+
 
 static inline uint8_t temp_in_interval(int16_t temp, int16_t a, int16_t b);
 static int8_t yogurt_temperature_control(int16_t *cur_temp);
@@ -55,18 +55,22 @@ static inline int32_t yogurt_attain_temperature(int32_t level, int16_t diff, int
 static void yogurt_start(void);
 static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
+static void yogurt_extras_timer(void);
+static void yogurt_extras(void);
 static void yogurt_keyhandler(void);
 static int8_t yogurt_get_temp(int16_t *temp);
 static void yogurt_clear_state(void);
 
 static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds);
 static inline void yogurt_print_status_down(int16_t temp, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds);
+static inline void time_to_countdown(int16_t *minutes, uint8_t *seconds, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds);
 static void yogurt_keyhandler_idle(char);
 
 
 static int yogurt_tempinput_get_num(uint8_t *digits, uint8_t max_digits);
 static void yogurt_tempinput_print(uint8_t *digits, uint8_t max_digits);
 static void yogurt_timeinput_print(uint8_t *digits, uint8_t max_digits);
+static inline int temp_to_f(int16_t temp);
 
 void yogurt_init() {
 	display_init();
@@ -102,14 +106,64 @@ static void yogurt_start() {
 	}
 }
 
-/**
- * This runs via timer
- */
-static void yogurt_run_upper() {
+static void yogurt_extras_timer(void) {
 	if (++control.seconds == 60) {
 		control.minutes++;
 		control.seconds = 0;
 	}
+
+	task_schedule(yogurt_extras);
+}
+
+static void yogurt_extras(void) {
+	int16_t n1 = 0,n2 = 0;
+	int16_t temp = 0;
+	int8_t error = 0;
+
+	if (extras.timer) {
+		int16_t minutes;
+		uint8_t seconds;
+		time_to_countdown(&minutes, &seconds, control.cycle.minutes, control.minutes, control.seconds);
+
+		if (minutes >= 60) {
+			n1 = minutes/60;
+			n2 = minutes-60*n1;
+		} else {
+			n1 = minutes;
+			n2 = seconds;
+		}
+
+		if (control.minutes >= control.cycle.minutes) {
+			extras.timer = 0;
+			alarm_on();
+		}
+	}
+
+	if (extras.thermo) {
+		error = yogurt_temperature_control(&temp);
+		temp = temp_to_f(temp);
+	}
+
+	if (!error) {
+		if (extras.timer && extras.thermo) {
+			printf("%4d%2d:%02d",temp,n1,n2);
+		} else if (extras.timer) {
+			printf("    %2d:%02d",n1,n2);
+		} else if (extras.thermo) {
+			printf("%4d    ",temp);
+		}
+	} else {
+		printf("Err");
+	}
+
+	if (!extras.timer && !extras.thermo)
+		del_timer(yogurt_extras_timer);
+}
+
+/**
+ * This runs via timer
+ */
+static void yogurt_run_upper() {
 	task_schedule(yogurt_run_lower);
 }
 
@@ -262,6 +316,10 @@ static inline int32_t yogurt_maintain_temperature(int32_t level, int16_t diff, i
 	return level + control.integral;
 }
 
+static inline int temp_to_f(int16_t temp) {
+	return (int)(temp*9.0/80.0+32.5);
+}
+
 static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds) {
 	int16_t n1,n2;
 	if (minutes >= 60) {
@@ -272,28 +330,32 @@ static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds) 
 		n2 = seconds;
 	}
 
-	printf("%4d%2d:%02d",(int)(temp*9.0/80.0+32.5),n1,n2);
+	printf("%4d%2d:%02d",temp_to_f(temp),n1,n2);
+}
+
+static inline void time_to_countdown(int16_t *minutes, uint8_t *seconds, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds) {
+	*minutes = cycle_minutes - cur_minutes - 1;
+	*seconds = 60-cur_seconds;
+
+	if (*seconds == 60) {
+		(*minutes)++;
+		*seconds = 0;
+	}
 }
 
 static inline void yogurt_print_status_down(int16_t temp, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds) {
 	int16_t minutes;
 	uint8_t seconds;
-
-	minutes = cycle_minutes - cur_minutes - 1;
-	seconds = 60-cur_seconds;
-
-	if (seconds == 60) {
-		minutes++ ;
-		seconds = 0;
-	}
-
+	time_to_countdown(&minutes,&seconds,cycle_minutes,cur_minutes,cur_seconds);
 	yogurt_print_status(temp,minutes,seconds);
 }
 
 static void yogurt_clear_state(void) {
 	control.state = YOGURT_STATE_IDLE;
-	control.extras.timer = 0;
-	control.extras.thermo = 0;
+	extras.timer = 0;
+	extras.thermo = 0;
+	del_timer(yogurt_run_upper);
+	del_timer(yogurt_extras_timer);
 	clear();
 	alarm_off();
 }
@@ -316,6 +378,7 @@ static void yogurt_keyhandler_idle(char key) {
 	static uint8_t step;
 	if (key == '*') {
 		if (step == 0) {
+			yogurt_clear_state();
 			step = 1;
 			digitreader_init(3, yogurt_tempinput_print);
 		} else if (step == 1) {
@@ -334,13 +397,45 @@ static void yogurt_keyhandler_idle(char key) {
 			uint8_t hours = digits[3]*10 + digits[2];
 			uint8_t minutes = digits[1]*10 + digits[0];
 			control.cycle.minutes = 60*hours + minutes;
-			yogurt_start();
+			// --> dirty as fuck
+			if (extras.timer) {
+				del_timer(yogurt_extras_timer);
+				add_timer(yogurt_extras_timer, TIMER_HZ, TIMER_RUN_UNLIMITED);
+				control.minutes = 0;
+				control.seconds = 0;
+			} else {
+				yogurt_start();
+			}
 		}
 	} else if (key == '#') {
 		step = 0;
 		yogurt_clear_state();
 	} else if (key >= '0' && key <= '9' && step > 0) {
 		digitreader_handle_digit(key - '0');
+	} else if (key == 'b') {
+		extras.thermo  ^= 1;
+
+		if (!extras.timer) {
+			del_timer(yogurt_extras_timer);
+			clear();
+		}
+		
+		if (extras.thermo && !extras.timer)
+			add_timer(yogurt_extras_timer, TIMER_HZ, TIMER_RUN_UNLIMITED);
+
+	} else if (key == 'c') {
+		extras.timer ^= 1;
+
+		del_timer(yogurt_extras_timer);
+		clear();
+
+		if (extras.timer) {
+			//fuck this is sooo dirty
+			step = 2;
+			digitreader_init(4, yogurt_timeinput_print);
+		} else if (extras.thermo) {
+			add_timer(yogurt_extras_timer, TIMER_HZ, TIMER_RUN_UNLIMITED);
+		}
 	}
 }
 
