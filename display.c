@@ -70,11 +70,11 @@ static display_state_t state;
 
 
 static void uart_tx_interrupt_enable(void) {
-	USARTC1.CTRLA |= USART_DREINTLVL_LO_gc;
+	DISPLAY_USART.CTRLA |= USART_DREINTLVL_LO_gc;
 }
 
 static void uart_tx_interrupt_disable(void) {
-	USARTC1.CTRLA &= ~USART_DREINTLVL_LO_gc;
+	DISPLAY_USART.CTRLA &= ~USART_DREINTLVL_LO_gc;
 }
 /**
  * Given a character (c), return the segments required to display c
@@ -156,7 +156,7 @@ static inline void xlat_trigger() {
 }
 
 static inline void display_write_byte(void) {
-	USARTC1.DATA = state.buf[state.bytes++];
+	DISPLAY_USART.DATA = state.buf[state.bytes++];
 }
 
 static void display_write() {
@@ -175,7 +175,7 @@ static void display_write() {
 	}
 }
 
-ISR(USARTC1_DRE_vect) {
+ISR(DISPLAY_DRE_vect) {
 	display_write_byte();
 
 	if (state.bytes == DISPLAY_SIZE) {
@@ -183,7 +183,7 @@ ISR(USARTC1_DRE_vect) {
 	}
 }
 
-ISR(USARTC1_TXC_vect) {
+ISR(DISPLAY_TXC_vect) {
 	xlat_trigger();
 }
 
@@ -191,23 +191,18 @@ ISR(USARTC1_TXC_vect) {
  * Perform initialization of state and hardware
  */
 void display_init() {
-	//0 = fastest; 1 = 8mhz
-	uint16_t bsel = 8;
-	int8_t bscale = 0;
+	DISPLAY_USART.BAUDCTRLA = (uint8_t)( DISPLAY_BSEL & 0x00FF );
+	DISPLAY_USART.BAUDCTRLB = (uint8_t)( (DISPLAY_BSEL>>8) & 0x0F ) ;
 
-	//BSEL
-	USARTC1.BAUDCTRLA = (uint8_t)( bsel & 0x00FF );
-	USARTC1.BAUDCTRLB = (bscale<<USART_BSCALE_gp) | (uint8_t)( (bsel>>8) & 0x0F ) ;
-
-	USARTC1.CTRLA |= USART_TXCINTLVL0_bm;
-	USARTC1.CTRLC |= USART_CMODE_MSPI_gc;
-	USARTC1.CTRLB |= USART_TXEN_bm;
+	DISPLAY_USART.CTRLA |= USART_TXCINTLVL0_bm;
+	DISPLAY_USART.CTRLC |= USART_CMODE_MSPI_gc;
+	DISPLAY_USART.CTRLB |= USART_TXEN_bm;
 
 	//xmegaA, p237
-	PORTC.DIRSET = PIN7_bm | _XLAT_bm | PIN5_bm;
+	DISPLAY_PORT.DIRSET = _SCLK_bm | _XLAT_bm | _SOUT_bm;
 
-	PORTC.OUTSET = PIN7_bm;
-	PORTC.OUTCLR = _XLAT_bm;
+	DISPLAY_PORT.OUTSET = _SOUT_bm;
+	DISPLAY_PORT.OUTCLR = _XLAT_bm;
 
 	state.bytes = 0;
 

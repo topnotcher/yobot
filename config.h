@@ -11,15 +11,16 @@
  * Display configuration
  **************************************/
 #define DISPLAY_PORT PORTC
-#define DISPLAY_SPI SPIC
+#define DISPLAY_USART USARTC1
 
 // These mappings must correspond to the SPI hardware
-#define DISPLAY_SCLK_PIN 7
-#define DISPLAY_SOUT_PIN 5
+#define DISPLAY_SCLK_PIN 5
+#define DISPLAY_SOUT_PIN 7
 #define DISPLAY_XLAT_PIN 4
-#define DISPLAY_SPI_vect SPIC_INT_vect
+#define DISPLAY_DRE_vect USARTC1_DRE_vect
+#define DISPLAY_TXC_vect USARTC1_TXC_vect
+#define DISPLAY_BSEL 8
 #define DISPLAY_SIZE 8
-
 
 /**
  * 1WB to TWI bridge configuration
