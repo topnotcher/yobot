@@ -1,5 +1,3 @@
-#include <util/delay.h>
-#include <avr/sleep.h>
 #include <util/atomic.h>
 #include <stdint.h>
 #include <avr/io.h>
@@ -65,9 +63,7 @@ typedef struct {
 	uint8_t bytes;
 	uint8_t buf[DISPLAY_SIZE];
 } display_state_t;
-
 static display_state_t state;
-
 
 static void uart_tx_interrupt_enable(void) {
 	DISPLAY_USART.CTRLA |= USART_DREINTLVL_LO_gc;
@@ -76,6 +72,7 @@ static void uart_tx_interrupt_enable(void) {
 static void uart_tx_interrupt_disable(void) {
 	DISPLAY_USART.CTRLA &= ~USART_DREINTLVL_LO_gc;
 }
+
 /**
  * Given a character (c), return the segments required to display c
  */
