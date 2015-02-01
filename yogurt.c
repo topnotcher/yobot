@@ -9,6 +9,7 @@
 #include "keypad.h"
 #include "alarm.h"
 #include "debug.h"
+#include "digitreader.h"
 
 #define MIN(a,b) (((a) > (b))? (b) : (a))
 #define MAX(a,b) (((a) > (b))? (a) : (b))
@@ -31,6 +32,11 @@ typedef struct {
 		YOGURT_STATE_MAINTAIN
 	} state;
 
+	struct {
+		uint8_t timer:1;
+		uint8_t thermo:1;
+	} extras;
+
 	int16_t last_temp;
 	int16_t integral;
 
@@ -51,10 +57,16 @@ static void yogurt_run_upper(void);
 static void yogurt_run_lower(void);
 static void yogurt_keyhandler(void);
 static int8_t yogurt_get_temp(int16_t *temp);
+static void yogurt_clear_state(void);
 
 static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds);
 static inline void yogurt_print_status_down(int16_t temp, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds);
 static void yogurt_keyhandler_idle(char);
+
+
+static int yogurt_tempinput_get_num(uint8_t *digits, uint8_t max_digits);
+static void yogurt_tempinput_print(uint8_t *digits, uint8_t max_digits);
+static void yogurt_timeinput_print(uint8_t *digits, uint8_t max_digits);
 
 void yogurt_init() {
 	display_init();
@@ -278,6 +290,14 @@ static inline void yogurt_print_status_down(int16_t temp, int16_t cycle_minutes,
 	yogurt_print_status(temp,minutes,seconds);
 }
 
+static void yogurt_clear_state(void) {
+	control.state = YOGURT_STATE_IDLE;
+	control.extras.timer = 0;
+	control.extras.thermo = 0;
+	clear();
+	alarm_off();
+}
+
 static void yogurt_keyhandler(void) {
 	char key = keypad_getc();
 	if (!key)
@@ -288,62 +308,58 @@ static void yogurt_keyhandler(void) {
 	} else if (control.state == YOGURT_STATE_IDLE) {
 		yogurt_keyhandler_idle(key);
 	} else if (key == '#') {
-		control.state = YOGURT_STATE_IDLE;
-		clear();
-		alarm_off();
+		yogurt_clear_state();
 	}
 }
 
 static void yogurt_keyhandler_idle(char key) {
-	static uint8_t step = 0;
-	static uint8_t digits[4] = {0};
-	static int num = 0;
-	static uint8_t max_digits = 3;
-
+	static uint8_t step;
 	if (key == '*') {
 		if (step == 0) {
 			step = 1;
-			max_digits = 3;
-			for (uint8_t i = 0; i < max_digits; ++i)
-				digits[i] = 0;
-			printf(" ---    ");
+			digitreader_init(3, yogurt_tempinput_print);
 		} else if (step == 1) {
-			step = 2;
-			max_digits = 4;
 			//convert to 16th degrees C
-			control.cycle.temperature = (num-32)*80.0/9;
-			for (uint8_t i = 0; i < max_digits; ++i)
-				digits[i] = 0;
-			printf("    --:--");
+			uint8_t *digits = NULL;
+			uint8_t *max_digits = NULL;
+			digits = digitreader_get(max_digits);
+			control.cycle.temperature = (yogurt_tempinput_get_num(digits,*max_digits)-32)*80.0/9;
+			step = 2;
+			digitreader_init(4, yogurt_timeinput_print);
 		} else if (step == 2) {
 			step = 0;
-			control.cycle.minutes = num;
+			uint8_t *digits = NULL;
+			uint8_t *max_digits = NULL;
+			digits = digitreader_get(max_digits);
+			uint8_t hours = digits[3]*10 + digits[2];
+			uint8_t minutes = digits[1]*10 + digits[0];
+			control.cycle.minutes = 60*hours + minutes;
 			yogurt_start();
 		}
 	} else if (key == '#') {
 		step = 0;
-		clear();
-		alarm_off();
+		yogurt_clear_state();
 	} else if (key >= '0' && key <= '9' && step > 0) {
-		for (uint8_t i = max_digits-1; i > 0; --i)
-			digits[i] = digits[i-1];
-
-		digits[0] = key - '0';
-
-		if (step == 1) {
-			num = 0;
-			int x = 1;
-			for (uint8_t i = 0; i < max_digits; ++i) {
-				num += digits[i]*x;
-				x *= 10;
-			}
-			printf("%4d    ", num);
-		} else if (step == 2) {
-			uint8_t hours = digits[3]*10 + digits[2];
-			uint8_t minutes = digits[1]*10 + digits[0];
-			num = hours*60 + minutes;
-			printf("    %02d:%02d",hours,minutes);
-		}
-
+		digitreader_handle_digit(key - '0');
 	}
+}
+
+static int yogurt_tempinput_get_num(uint8_t *digits, uint8_t max_digits) {
+	int num = 0;
+	int x = 1;
+	for (uint8_t i = 0; i < max_digits; ++i) {
+		num += digits[i]*x;
+		x *= 10;
+	}
+	return num;
+}
+
+static void yogurt_tempinput_print(uint8_t *digits, uint8_t max_digits) {
+	printf(" %03d    ", yogurt_tempinput_get_num(digits,max_digits));
+}
+
+static void yogurt_timeinput_print(uint8_t *digits, uint8_t max_digits) {
+	uint8_t hours = digits[3]*10 + digits[2];
+	uint8_t minutes = digits[1]*10 + digits[0];
+	printf("    %02d:%02d",hours,minutes);
 }
