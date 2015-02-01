@@ -75,7 +75,7 @@ static void uart_begin_tx(void) {
 	uart_tx_interrupt_enable();
 }
 
-void debug_write(void *data,const uint8_t size) {
+void __debug_write(void *data, uint8_t size) {
 	uart_buf *buf = mempool_alloc(uart.pool);
 	memcpy((void*)(buf->data),data,size);
 	buf->size = size;
