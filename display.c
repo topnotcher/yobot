@@ -64,11 +64,6 @@ static const uint8_t display_charmap[][2] = {
 static uint8_t display_buffer[DISPLAY_SIZE] = {0};
 
 typedef struct {
-	//state machine for controlling the SPI
-	enum {
-		DISPLAY_STATUS_BUSY,
-		DISPLAY_STATUS_IDLE
-	} status;
 	uint8_t bytes;
 } display_state_t;
 
@@ -178,8 +173,6 @@ static void display_write() {
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		uart_tx_interrupt_enable();
 		state.bytes = 0;
-		state.status = DISPLAY_STATUS_BUSY;
-		//display_write_byte();
 	}
 }
 
@@ -187,7 +180,6 @@ ISR(USARTC1_DRE_vect) {
 	display_write_byte();
 
 	if (state.bytes == DISPLAY_SIZE) {
-		state.status = DISPLAY_STATUS_IDLE;
 		uart_tx_interrupt_disable();
 	}
 }
@@ -234,7 +226,6 @@ void display_init() {
 
 	//PORTC.PIN7CTRL |= PORT_INVEN_bm;
 
-	state.status = DISPLAY_STATUS_IDLE;
 	state.bytes = 0;
 	
 	for ( uint8_t i = 0; i < DISPLAY_SIZE; ++i ) 
