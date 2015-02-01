@@ -314,6 +314,7 @@ static void yogurt_keyhandler_idle(char key) {
 	} else if (key == '#') {
 		step = 0;
 		clear();
+		alarm_off();
 	} else if (key >= '0' && key <= '9' && step > 0) {
 		for (uint8_t i = max_digits-1; i > 0; --i)
 			digits[i] = digits[i-1];
