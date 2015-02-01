@@ -250,22 +250,6 @@ static inline int32_t yogurt_maintain_temperature(int32_t level, int16_t diff, i
 	return level + control.integral;
 }
 
-static void yogurt_keyhandler(void) {
-	char key = keypad_getc();
-	if (!key)
-		return;
-
-	if (key == 'd') {
-		alarm_off();
-	} else if (control.state == YOGURT_STATE_IDLE) {
-		yogurt_keyhandler_idle(key);
-	} else if (key == '#') {
-		control.state = YOGURT_STATE_IDLE;
-		clear();
-		alarm_off();
-	}
-}
-
 static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds) {
 	int16_t n1,n2;
 	if (minutes >= 60) {
@@ -292,6 +276,22 @@ static inline void yogurt_print_status_down(int16_t temp, int16_t cycle_minutes,
 	}
 
 	yogurt_print_status(temp,minutes,seconds);
+}
+
+static void yogurt_keyhandler(void) {
+	char key = keypad_getc();
+	if (!key)
+		return;
+
+	if (key == 'd') {
+		alarm_off();
+	} else if (control.state == YOGURT_STATE_IDLE) {
+		yogurt_keyhandler_idle(key);
+	} else if (key == '#') {
+		control.state = YOGURT_STATE_IDLE;
+		clear();
+		alarm_off();
+	}
 }
 
 static void yogurt_keyhandler_idle(char key) {
