@@ -48,11 +48,9 @@
 #define KEYPAD_ISR ISR(PORTA_INT0_vect)
 /*
  * Map the port pins to the keypad rows columns.
- * "KEYPAD_PIN_R2 6" means row 2 on the keypad is 
- * connected to PIN6 on the port (PA6). 
+ * "KEYPAD_PIN_R2 6" means row 2 on the keypad is
+ * connected to PIN6 on the port (PA6).
  */
-/*4 connects R4,C1
-7 clears... C1 should be R4...*/
 #define KEYPAD_PIN_R1 3
 #define KEYPAD_PIN_R2 5
 #define KEYPAD_PIN_R3 1
