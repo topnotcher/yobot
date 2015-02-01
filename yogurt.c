@@ -12,11 +12,9 @@
 
 #define MIN(a,b) (((a) > (b))? (b) : (a))
 #define MAX(a,b) (((a) > (b))? (a) : (b))
-//stage 1 heats to 185F for 10 minutes to sterilize
-//stage 2 cools the milk to 110F and holds for 10 minutes
-//stage 3 incubates at 100F for 8 hours
+
 typedef struct {
-	//target temperature in C
+	//target temperature in 1/16th C
 	int16_t temperature;
 	uint16_t minutes;
 } yogurt_cycle_t;
@@ -26,7 +24,7 @@ typedef struct {
 	int16_t next_target;
 
 	//each cycle starts by attaining the target temperature.
-	//when the target is achieved, it is maintained.
+	//when the target is attained, it is maintained.
 	enum {
 		YOGURT_STATE_IDLE,
 		YOGURT_STATE_ATTAIN,
@@ -94,13 +92,10 @@ static void yogurt_start() {
  * This runs via timer
  */
 static void yogurt_run_upper() {
-//how did debug_write send seconds=0, minutes=0 one time????
-//	if (control.state == YOGURT_STATE_MAINTAIN) {
-		if (++control.seconds == 60) {
-			control.minutes++;
-			control.seconds = 0;
-		}
-	//}
+	if (++control.seconds == 60) {
+		control.minutes++;
+		control.seconds = 0;
+	}
 	task_schedule(yogurt_run_lower);
 }
 
@@ -118,7 +113,6 @@ static void yogurt_run_lower() {
 	int16_t temp;
 	int8_t error = yogurt_maintain_temperature(control.cycle.temperature, &temp);
 
-	//@TODO
 	if (error) {
 		printf("Err");
 		return;
@@ -127,7 +121,6 @@ static void yogurt_run_lower() {
 	if (control.state == YOGURT_STATE_MAINTAIN) {
 		yogurt_print_status_down(temp,control.cycle.minutes,control.minutes,control.seconds);
 
-		//increment happens in upper
 		if (control.minutes >= control.cycle.minutes) {
 				ssr_off();
 				alarm_on();
@@ -139,11 +132,11 @@ static void yogurt_run_lower() {
 
 		if (temp_in_interval(control.cycle.temperature,control.last_temp,temp)) {
 			yogurt_print_status(temp,control.cycle.minutes,control.seconds);
-			control.integral = 0;
-			control.state = YOGURT_STATE_MAINTAIN;
 			alarm_on();
 			control.minutes = 0;
 			control.seconds = 0;
+			control.integral = 0;
+			control.state = YOGURT_STATE_MAINTAIN;
 		}
 	}
 
@@ -190,14 +183,19 @@ static int8_t yogurt_maintain_temperature(int16_t set_point, int16_t *cur_temp) 
 	int32_t level = SSR_MAX_LEVEL/60+1;
 
 	if (control.state == YOGURT_STATE_ATTAIN) {
-		// 134 is about 15 degrees F. So if the diff is < 15F, the level
-		// scales down proportionally from 100% to reduce overshoot.
+		// 134 is about 15 degrees F - So proportional
+		// control activates within 15 degrees of target
 		level += (int32_t)diff*(SSR_MAX_LEVEL/134);
 
-		//avoid too much? integral windup.
+		// attempts to avoid integral windup.
 		if (control.minutes >= 5 && diff < 134 && diff_pos == 60) {
-			//@TODO possibly make gain proportional to time too. (time increases -> increase gain)
+
+			//every two minutes
 			if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
+
+				// next_target reduces integral windup by raising the target
+				// temperature by 12 at a time, so the diff used for the integral
+				// can never exceed 12.
 				if (control.next_target != 0) {
 					control.integral += (control.next_target - *cur_temp)*160;
 					control.next_target = *cur_temp + 12;
