@@ -159,7 +159,7 @@ static inline void display_write_byte(void) {
 	USARTC1.DATA = state.buf[state.bytes++];
 }
 
-static void display_write() {	
+static void display_write() {
 	//It is possible to call this while the previous data is still being
 	//written to the display. However, since the display is a giant shift
 	//register, this is irrelevant: any data already written and not latched
@@ -182,6 +182,7 @@ ISR(USARTC1_DRE_vect) {
 		uart_tx_interrupt_disable();
 	}
 }
+
 ISR(USARTC1_TXC_vect) {
 	xlat_trigger();
 }
@@ -190,21 +191,6 @@ ISR(USARTC1_TXC_vect) {
  * Perform initialization of state and hardware
  */
 void display_init() {
-
-/*#define DISPLAY_SCLK_PIN 7
-#define DISPLAY_SOUT_PIN 5
-#define DISPLAY_XLAT_PIN 4
-	TXD1 = 7, RXD1 = 6, XCK1 = 5
-	*/
-/*
-	DISPLAY_PORT.DIRSET = _SCLK_bm | _SOUT_bm | _XLAT_bm;
-	DISPLAY_PORT.OUTSET = _SCLK_bm | _SOUT_bm;
-	DISPLAY_PORT.OUTCLR = _XLAT_bm;
-	
-	//DISPLAY_SPI.CTRL = SPI_ENABLE_bm | SPI_MASTER_bm | SPI_PRESCALER_DIV128_gc | SPI_DORD_bm;
-	DISPLAY_SPI.INTCTRL = SPI_INTLVL_LO_gc;
-	*/
-
 	//0 = fastest; 1 = 8mhz
 	uint16_t bsel = 8;
 	int8_t bscale = 0;
@@ -214,7 +200,7 @@ void display_init() {
 	USARTC1.BAUDCTRLB = (bscale<<USART_BSCALE_gp) | (uint8_t)( (bsel>>8) & 0x0F ) ;
 
 	USARTC1.CTRLA |= USART_TXCINTLVL0_bm;
-	USARTC1.CTRLC |= /*USART_CHSIZE_8BIT_gc |*/ USART_CMODE_MSPI_gc /*| _BV(2) | _BV(1)*/;
+	USARTC1.CTRLC |= USART_CMODE_MSPI_gc;
 	USARTC1.CTRLB |= USART_TXEN_bm;
 
 	//xmegaA, p237
@@ -223,13 +209,10 @@ void display_init() {
 	PORTC.OUTSET = PIN7_bm;
 	PORTC.OUTCLR = _XLAT_bm;
 
-	//PORTC.PIN7CTRL |= PORT_INVEN_bm;
-
 	state.bytes = 0;
-	
-	for ( uint8_t i = 0; i < DISPLAY_SIZE; ++i ) 
+
+	for (uint8_t i = 0; i < DISPLAY_SIZE; ++i)
 		state.buf[i] = 0;
 
-	//this will not run until interrupts are enabled.
 	display_write();
 }
