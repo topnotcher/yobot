@@ -164,6 +164,11 @@ static void yogurt_extras(void) {
  * This runs via timer
  */
 static void yogurt_run_upper() {
+	if (++control.seconds == 60) {
+		control.minutes++;
+		control.seconds = 0;
+	}
+
 	task_schedule(yogurt_run_lower);
 }
 
