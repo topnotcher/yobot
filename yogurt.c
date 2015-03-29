@@ -284,7 +284,7 @@ static inline int32_t yogurt_attain_temperature(int32_t level, int16_t diff, int
 	level += (int32_t)diff*(SSR_MAX_LEVEL/134);
 
 	// attempts to avoid integral windup.
-	if (control.minutes >= 5 && diff < 134 && diff_pos == 60) {
+	if (diff < 134 && diff_pos == 60) {
 
 		//every two minutes
 		if (control.integral < SSR_MAX_LEVEL && (control.minutes&0x1) && control.seconds == 0) {
@@ -293,7 +293,7 @@ static inline int32_t yogurt_attain_temperature(int32_t level, int16_t diff, int
 			// temperature by 12 at a time, so the diff used for the integral
 			// can never exceed 12.
 			if (control.next_target != 0) {
-				control.integral += (control.next_target - *cur_temp)*160;
+				control.integral += (control.next_target - *cur_temp)*180;
 				control.next_target = *cur_temp + 12;
 				if (control.next_target > control.cycle.temperature)
 					control.next_target = control.cycle.temperature;
