@@ -45,6 +45,8 @@ static yogurt_state_t control;
 static struct {
 	uint8_t timer:1;
 	uint8_t thermo:1;
+	//alarm on/off
+	uint8_t alarm:1;
 } extras;
 
 
@@ -65,6 +67,7 @@ static void yogurt_print_status(int16_t temp, int16_t minutes, uint8_t seconds);
 static inline void yogurt_print_status_down(int16_t temp, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds);
 static inline void time_to_countdown(int16_t *minutes, uint8_t *seconds, int16_t cycle_minutes, int16_t cur_minutes, uint8_t cur_seconds);
 static void yogurt_keyhandler_idle(char);
+static void yogurt_alarm(void);
 
 
 static int yogurt_tempinput_get_num(uint8_t *digits, uint8_t max_digits);
@@ -135,7 +138,7 @@ static void yogurt_extras(void) {
 
 		if (control.minutes >= control.cycle.minutes) {
 			extras.timer = 0;
-			alarm_on();
+			yogurt_alarm();
 		}
 	}
 
@@ -196,7 +199,7 @@ static void yogurt_run_lower() {
 
 		if (control.minutes >= control.cycle.minutes) {
 				ssr_off();
-				alarm_on();
+				yogurt_alarm();
 				control.state = YOGURT_STATE_IDLE;
 		}
 
@@ -205,7 +208,7 @@ static void yogurt_run_lower() {
 
 		if (temp_in_interval(control.cycle.temperature,control.last_temp,temp)) {
 			yogurt_print_status(temp,control.cycle.minutes,control.seconds);
-			alarm_on();
+			yogurt_alarm();
 			control.minutes = 0;
 			control.seconds = 0;
 			control.integral = 0;
@@ -359,10 +362,16 @@ static void yogurt_clear_state(void) {
 	control.state = YOGURT_STATE_IDLE;
 	extras.timer = 0;
 	extras.thermo = 0;
+	extras.alarm = 0;
 	del_timer(yogurt_run_upper);
 	del_timer(yogurt_extras_timer);
 	clear();
 	alarm_off();
+}
+
+static void yogurt_alarm() {
+	if (extras.alarm)
+		yogurt_alarm();
 }
 
 static void yogurt_keyhandler(void) {
@@ -372,6 +381,14 @@ static void yogurt_keyhandler(void) {
 
 	if (key == 'd') {
 		alarm_off();
+	} else if (key == 'a') {
+		extras.alarm ^= 1;
+
+		if (extras.alarm)
+			printf("On      ");
+		else
+			printf("Off      ");
+
 	} else if (control.state == YOGURT_STATE_IDLE) {
 		yogurt_keyhandler_idle(key);
 	} else if (key == '#') {
@@ -418,7 +435,7 @@ static void yogurt_keyhandler_idle(char key) {
 	} else if (key >= '0' && key <= '9' && step > 0) {
 		digitreader_handle_digit(key - '0');
 	} else if (key == 'b') {
-		extras.thermo  ^= 1;
+		extras.thermo ^= 1;
 
 		if (!extras.timer) {
 			del_timer(yogurt_extras_timer);
